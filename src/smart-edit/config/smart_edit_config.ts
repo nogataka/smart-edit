@@ -17,7 +17,7 @@ import type { YamlDocument, YamlObject } from '../util/general.js';
 import { determineProgrammingLanguageComposition } from '../util/inspection.js';
 import { singleton } from '../util/class_decorators.js';
 import { ToolRegistry } from '../tools/tools_base.js';
-import { Language, coerceLanguage } from '../../smart-lsp/ls_config.js';
+import { Language, coerceLanguage, listLanguages, getLanguageFilenameMatcher } from '../../smart-lsp/ls_config.js';
 
 const { logger: log } = createSmartEditLogger({ name: 'smart-edit.config' });
 
@@ -327,7 +327,11 @@ export class ProjectConfig extends ToolInclusionDefinition {
 
     let language = options.projectLanguage;
     if (!language) {
-      const composition = determineProgrammingLanguageComposition(resolvedRoot);
+      const languageDefinitions = listLanguages().map((lang) => ({
+        name: lang,
+        matcher: getLanguageFilenameMatcher(lang)
+      }));
+      const composition = determineProgrammingLanguageComposition(resolvedRoot, { languages: languageDefinitions });
       const entries = Object.entries(composition);
       if (entries.length === 0) {
         const relativePath = path.join(resolvedRoot, this.relPathToProjectYml());
