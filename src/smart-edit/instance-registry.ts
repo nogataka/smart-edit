@@ -7,11 +7,12 @@
  */
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import crypto from 'node:crypto';
 
-import { SMART_EDIT_MANAGED_DIR_IN_HOME } from './constants.js';
+import { SMART_EDIT_MANAGED_DIR_NAME } from './constants.js';
 import { createSmartEditLogger } from './util/logging.js';
 
 const { logger } = createSmartEditLogger({ name: 'smart-edit.instance-registry', emitToConsole: false, level: 'info' });
@@ -31,8 +32,19 @@ interface InstanceRegistryData {
   instances: InstanceInfo[];
 }
 
-const INSTANCES_FILE = path.join(SMART_EDIT_MANAGED_DIR_IN_HOME, 'instances.json');
-const LOCK_FILE = path.join(SMART_EDIT_MANAGED_DIR_IN_HOME, 'instances.lock');
+// Compute paths dynamically to respect runtime HOME changes (important for testing)
+function getSmartEditDir(): string {
+  return path.join(os.homedir(), SMART_EDIT_MANAGED_DIR_NAME);
+}
+
+function getInstancesFilePath(): string {
+  return path.join(getSmartEditDir(), 'instances.json');
+}
+
+function getLockFilePath(): string {
+  return path.join(getSmartEditDir(), 'instances.lock');
+}
+
 const LOCK_TIMEOUT_MS = 5000;
 const LOCK_RETRY_INTERVAL_MS = 50;
 
@@ -44,19 +56,20 @@ function ensureDirectoryExists(filePath: string): void {
 }
 
 function acquireLock(): boolean {
-  ensureDirectoryExists(LOCK_FILE);
+  const lockFile = getLockFilePath();
+  ensureDirectoryExists(lockFile);
   const startTime = Date.now();
 
   while (Date.now() - startTime < LOCK_TIMEOUT_MS) {
     try {
-      fs.writeFileSync(LOCK_FILE, String(process.pid), { flag: 'wx' });
+      fs.writeFileSync(lockFile, String(process.pid), { flag: 'wx' });
       return true;
     } catch (error) {
       const err = error as NodeJS.ErrnoException;
       if (err.code === 'EEXIST') {
         // Lock file exists, check if the process is still alive
         try {
-          const lockPid = Number.parseInt(fs.readFileSync(LOCK_FILE, 'utf-8').trim(), 10);
+          const lockPid = Number.parseInt(fs.readFileSync(lockFile, 'utf-8').trim(), 10);
           if (!Number.isNaN(lockPid)) {
             try {
               // Check if process is alive (signal 0 doesn't kill, just checks)
@@ -64,7 +77,7 @@ function acquireLock(): boolean {
             } catch {
               // Process is dead, remove stale lock
               try {
-                fs.unlinkSync(LOCK_FILE);
+                fs.unlinkSync(lockFile);
                 continue;
               } catch {
                 // Ignore unlink errors
@@ -74,16 +87,16 @@ function acquireLock(): boolean {
         } catch {
           // Can't read lock file, try to remove it
           try {
-            fs.unlinkSync(LOCK_FILE);
+            fs.unlinkSync(lockFile);
             continue;
           } catch {
             // Ignore unlink errors
           }
         }
-        // Wait and retry
-        const waitTime = Math.min(LOCK_RETRY_INTERVAL_MS, LOCK_TIMEOUT_MS - (Date.now() - startTime));
-        if (waitTime > 0) {
-          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, waitTime);
+        // Brief busy-wait before retry (Atomics.wait requires SharedArrayBuffer which may not be available)
+        const waitUntil = Date.now() + Math.min(LOCK_RETRY_INTERVAL_MS, LOCK_TIMEOUT_MS - (Date.now() - startTime));
+        while (Date.now() < waitUntil) {
+          // Busy wait - this is acceptable since lock contention should be rare
         }
         continue;
       }
@@ -97,17 +110,18 @@ function acquireLock(): boolean {
 
 function releaseLock(): void {
   try {
-    fs.unlinkSync(LOCK_FILE);
+    fs.unlinkSync(getLockFilePath());
   } catch {
     // Ignore errors when releasing lock
   }
 }
 
 function readRegistry(): InstanceRegistryData {
-  ensureDirectoryExists(INSTANCES_FILE);
+  const instancesFile = getInstancesFilePath();
+  ensureDirectoryExists(instancesFile);
   try {
-    if (fs.existsSync(INSTANCES_FILE)) {
-      const content = fs.readFileSync(INSTANCES_FILE, 'utf-8');
+    if (fs.existsSync(instancesFile)) {
+      const content = fs.readFileSync(instancesFile, 'utf-8');
       const data = JSON.parse(content) as unknown;
       if (data && typeof data === 'object' && Array.isArray((data as InstanceRegistryData).instances)) {
         return data as InstanceRegistryData;
@@ -120,8 +134,9 @@ function readRegistry(): InstanceRegistryData {
 }
 
 function writeRegistry(data: InstanceRegistryData): void {
-  ensureDirectoryExists(INSTANCES_FILE);
-  fs.writeFileSync(INSTANCES_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  const instancesFile = getInstancesFilePath();
+  ensureDirectoryExists(instancesFile);
+  fs.writeFileSync(instancesFile, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 function isProcessAlive(pid: number): boolean {
@@ -147,6 +162,8 @@ export function generateInstanceId(): string {
 
 /**
  * Register a new MCP server instance in the registry.
+ * This function is designed to be non-fatal - if registration fails, the instance
+ * will still work, just won't be visible in the multi-instance dashboard.
  */
 export function registerInstance(info: Omit<InstanceInfo, 'id' | 'startedAt'>): InstanceInfo {
   const id = generateInstanceId();
@@ -156,26 +173,30 @@ export function registerInstance(info: Omit<InstanceInfo, 'id' | 'startedAt'>): 
     startedAt: new Date().toISOString()
   };
 
-  if (!acquireLock()) {
-    logger.error('Failed to acquire lock for registering instance');
-    return instance;
-  }
-
   try {
-    let data = readRegistry();
-    data = cleanupDeadInstances(data);
-
-    // Check for duplicate port (shouldn't happen, but just in case)
-    const existingIndex = data.instances.findIndex((i) => i.port === info.port);
-    if (existingIndex !== -1) {
-      data.instances.splice(existingIndex, 1);
+    if (!acquireLock()) {
+      logger.warn('Failed to acquire lock for registering instance, continuing without registration');
+      return instance;
     }
 
-    data.instances.push(instance);
-    writeRegistry(data);
-    logger.info(`Registered instance ${id} on port ${info.port} for project: ${info.project ?? '(none)'}`);
-  } finally {
-    releaseLock();
+    try {
+      let data = readRegistry();
+      data = cleanupDeadInstances(data);
+
+      // Check for duplicate port (shouldn't happen, but just in case)
+      const existingIndex = data.instances.findIndex((i) => i.port === info.port);
+      if (existingIndex !== -1) {
+        data.instances.splice(existingIndex, 1);
+      }
+
+      data.instances.push(instance);
+      writeRegistry(data);
+      logger.info(`Registered instance ${id} on port ${info.port} for project: ${info.project ?? '(none)'}`);
+    } finally {
+      releaseLock();
+    }
+  } catch (error) {
+    logger.warn('Failed to register instance in registry', error instanceof Error ? error : undefined);
   }
 
   return instance;
