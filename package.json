@@ -1,0 +1,76 @@
+{
+  "name": "@nogataka/smart-edit",
+  "version": "0.3.1",
+  "description": "Smart Edit is a tool for editing code with AI.",
+  "private": false,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ./scripts/copy-resources.mjs && pnpm build:dashboard",
+    "build:dashboard": "vite build --config src/smart-edit/dashboard-ui/vite.config.ts",
+    "clean": "rimraf dist",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "pnpm lint --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit && tsc -p src/smart-edit/dashboard-ui --noEmit",
+    "prompts:generate": "tsx src/devtools/generate_prompt_factory.ts",
+    "prepack": "pnpm build"
+  },
+  "bin": {
+    "smart-edit": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@dqbd/tiktoken": "^1.0.22",
+    "@modelcontextprotocol/sdk": "^1.16.0",
+    "adm-zip": "^0.5.16",
+    "chart.js": "^4.5.1",
+    "chartjs-plugin-datalabels": "^2.2.0",
+    "commander": "^12.1.0",
+    "ignore": "^7.0.5",
+    "nunjucks": "^3.2.4",
+    "react": "^19.2.4",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^19.2.4",
+    "tar": "^7.5.1",
+    "yaml": "^2.4.2",
+    "zod": "^3.25.0",
+    "zod-to-json-schema": "^3.24.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.12.0",
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^20.11.0",
+    "@types/nunjucks": "^3.2.5",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.9.0",
+    "@typescript-eslint/parser": "^8.9.0",
+    "@vitejs/plugin-react": "^5.1.2",
+    "@vitest/coverage-v8": "^2.1.1",
+    "eslint": "^9.12.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.3",
+    "rimraf": "^5.0.5",
+    "ts-node": "^10.9.2",
+    "tslib": "^2.7.0",
+    "tsx": "^4.17.0",
+    "typescript": "5.5.4",
+    "vite": "^7.3.1",
+    "vitest": "^2.1.1"
+  }
+}
