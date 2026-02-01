@@ -41,6 +41,13 @@ import {
   createSmartEditStdioServer
 } from './mcp.js';
 import {
+  DEFAULT_DASHBOARD_PORT,
+  registerInstance,
+  unregisterInstance,
+  findAvailablePort,
+  type InstanceInfo
+} from './instance-registry.js';
+import {
   ToolRegistry
 } from './tools/tools_base.js';
 import {
@@ -82,6 +89,7 @@ interface StartMcpServerOpts {
 interface StartMcpServerCliOptions {
   project?: unknown;
   projectFile?: unknown;
+  noProject?: unknown;
   context?: unknown;
   mode?: unknown;
   modes?: unknown;
@@ -194,8 +202,26 @@ function normalizeStartMcpServerOptions(raw: StartMcpServerCliOptions): StartMcp
     return undefined;
   };
 
+  // プロジェクトの決定ロジック:
+  // 1. --no-project が指定された場合: null（プロジェクトなしで起動）
+  // 2. --project が指定された場合: 指定されたパス
+  // 3. --project-file が指定された場合: 指定されたパス（後方互換）
+  // 4. どれも指定されていない場合: カレントディレクトリを使用
+  const resolveProject = (): string | null => {
+    if (raw.noProject === true) {
+      return null;
+    }
+    if (isNonEmptyString(raw.project)) {
+      return raw.project;
+    }
+    if (isNonEmptyString(raw.projectFile)) {
+      return raw.projectFile;
+    }
+    return process.cwd();
+  };
+
   return {
-    project: isNonEmptyString(raw.project) ? raw.project : null,
+    project: resolveProject(),
     projectFile: isNonEmptyString(raw.projectFile) ? raw.projectFile : null,
     context,
     modes: normalizedModes.slice(),
@@ -341,6 +367,9 @@ async function handleStartMcpServer(options: StartMcpServerOpts, projectArg?: st
       })
   });
 
+  // Track registered instance for cleanup
+  let registeredInstance: InstanceInfo | null = null;
+
   try {
     const serverOptions: SmartEditHttpServerOptions = {
       host: options.host,
@@ -357,11 +386,26 @@ async function handleStartMcpServer(options: StartMcpServerOpts, projectArg?: st
     switch (options.transport) {
       case 'streamable-http': {
         const server = await createSmartEditHttpServer(factory, serverOptions);
+        const serverPort = server.url.port ? Number.parseInt(server.url.port, 10) : options.port;
         logger.info(`Streamable HTTP MCP server started: ${server.url.href}`);
         logger.info('Press Ctrl+C to exit.');
+
+        // Register instance
+        registeredInstance = registerInstance({
+          port: serverPort,
+          project,
+          pid: process.pid,
+          transport: 'streamable-http'
+        });
+        logger.info(`Registered instance ${registeredInstance.id} in registry`);
+
         await new Promise<void>((resolve) => {
           const shutdown = async (): Promise<void> => {
             logger.info('Stopping HTTP MCP server...');
+            if (registeredInstance) {
+              unregisterInstance(registeredInstance.id);
+              logger.info(`Unregistered instance ${registeredInstance.id} from registry`);
+            }
             await server.close();
             resolve();
           };
@@ -377,6 +421,17 @@ async function handleStartMcpServer(options: StartMcpServerOpts, projectArg?: st
       case 'stdio': {
         const server = await createSmartEditStdioServer(factory, serverOptions);
         logger.info('STDIO MCP server started. Press Ctrl+C to exit.');
+
+        // For stdio transport, find an available port for the dashboard API
+        const dashboardPort = findAvailablePort();
+        registeredInstance = registerInstance({
+          port: dashboardPort,
+          project,
+          pid: process.pid,
+          transport: 'stdio'
+        });
+        logger.info(`Registered instance ${registeredInstance.id} in registry (dashboard port: ${dashboardPort})`);
+
         await new Promise<void>((resolve) => {
           let settled = false;
           const finalize = async (reason: 'signal' | 'transport-close'): Promise<void> => {
@@ -385,6 +440,10 @@ async function handleStartMcpServer(options: StartMcpServerOpts, projectArg?: st
             }
             settled = true;
             logger.info('Stopping STDIO MCP server...');
+            if (registeredInstance) {
+              unregisterInstance(registeredInstance.id);
+              logger.info(`Unregistered instance ${registeredInstance.id} from registry`);
+            }
             if (reason === 'signal') {
               await server.close();
             }
@@ -416,6 +475,11 @@ async function handleStartMcpServer(options: StartMcpServerOpts, projectArg?: st
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`Smart-Edit MCP サーバーの起動に失敗しました: ${message}`);
+    // Unregister instance on error
+    if (registeredInstance) {
+      unregisterInstance(registeredInstance.id);
+      logger.info(`Unregistered instance ${registeredInstance.id} from registry (error cleanup)`);
+    }
     throw error;
   } finally {
     cliLog.dispose();
@@ -514,7 +578,8 @@ export function createSmartEditCli(options: CreateCliOptions = {}): Command {
 
   const startMcpServerCommand = new Command('start-mcp-server')
     .description('Smart-Edit MCP サーバーを起動します。')
-    .option('--project [project]', '起動時にアクティブ化するプロジェクト名またはパス。')
+    .option('--project [project]', '起動時にアクティブ化するプロジェクトパス。省略時はカレントディレクトリを使用。')
+    .option('--no-project', 'プロジェクトなしで起動。後から activate_project ツールで指定可能。')
     .option('--project-file [project]', '[非推奨] --project の旧名称。')
     .argument('[project]', '[非推奨] プロジェクトの位置引数。')
     .option('--context <context>', 'ビルトインコンテキスト名またはカスタム YAML へのパス。')
@@ -560,6 +625,23 @@ export function createSmartEditCli(options: CreateCliOptions = {}): Command {
     });
 
   program.addCommand(startMcpServerCommand);
+
+  const startDashboardCommand = new Command('start-dashboard')
+    .description('統合ダッシュボードを起動します（MCPサーバーなし）。複数のMCPインスタンスを一括管理できます。')
+    .option('--port <port>', 'ダッシュボードのポート番号。', (value) => parseInteger(value, '--port'), DEFAULT_DASHBOARD_PORT)
+    .action(async function (this: Command) {
+      const opts = this.optsWithGlobals<{ port?: number }>();
+      const port = typeof opts.port === 'number' ? opts.port : DEFAULT_DASHBOARD_PORT;
+      try {
+        const { runStandaloneDashboard } = await import('./standalone-dashboard.js');
+        await runStandaloneDashboard({ port });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.error(`${message}\n`, { exitCode: 1 });
+      }
+    });
+
+  program.addCommand(startDashboardCommand);
 
   const modeCommand = new Command('mode')
     .description('Smart-Edit モードを管理します。');

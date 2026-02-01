@@ -116,7 +116,10 @@ export const ja = {
   sidebar: {
     expand: 'サイドバーを展開',
     collapse: 'サイドバーを折りたたむ',
-    shutdownConfirm: 'Smart Edit サーバーを完全に終了します。'
+    shutdownConfirm: 'Smart Edit サーバーを完全に終了します。',
+    project: 'プロジェクト',
+    noProject: 'プロジェクト未設定',
+    instances: 'プロジェクト'
   },
 
   // Theme

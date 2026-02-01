@@ -10,6 +10,7 @@ import { createSmartEditLogger } from './util/logging.js';
 import type { MemoryLogHandler } from './util/logging.js';
 import { SMART_EDIT_DASHBOARD_DIR } from './constants.js';
 import type { ToolUsageStats } from './analytics.js';
+import { getInstances } from './instance-registry.js';
 
 const { logger } = createSmartEditLogger({ name: 'smart-edit.dashboard', emitToConsole: false, level: 'info' });
 
@@ -351,6 +352,18 @@ export class SmartEditDashboardAPI {
     const url = parseUrl(req.url ?? '/', true);
     const pathname = url.pathname ?? '/';
 
+    // Add CORS headers for cross-origin requests from multi-instance dashboard
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    // Handle CORS preflight
+    if (method === 'OPTIONS') {
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
+
     try {
       if (pathname.startsWith('/dashboard')) {
         if (method !== 'GET') {
@@ -416,6 +429,24 @@ export class SmartEditDashboardAPI {
           }
           this.shutdown();
           this.sendJson(res, 200, { status: 'shutting down' });
+          return;
+        // Multi-instance dashboard APIs
+        case '/api/instances':
+          if (method !== 'GET') {
+            this.respondMethodNotAllowed(res);
+            return;
+          }
+          this.sendJson(res, 200, { instances: getInstances() });
+          return;
+        case '/api/instance-info':
+          if (method !== 'GET') {
+            this.respondMethodNotAllowed(res);
+            return;
+          }
+          this.sendJson(res, 200, {
+            port: this.listeningPort,
+            project: this.agent.getActiveProject()?.projectName ?? null
+          });
           return;
         default:
           this.respondNotFound(res);

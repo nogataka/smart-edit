@@ -94,9 +94,9 @@ Smart Edit は、AI の振る舞いをカスタマイズするための柔軟な
 | **Statistics** | API 呼び出し統計、トークン使用量チャート、ライブカウンター             |
 | **Sessions**   | セッション履歴、JSON エクスポート、過去セッション比較                  |
 
-- `--enable-web-dashboard` オプションで有効化
+- `npx @nogataka/smart-edit start-dashboard` で統合ダッシュボードを起動
+- 複数プロジェクトをサイドバーで切り替え管理
 - ダークモード / ライトモード切替対応
-- モバイルレスポンシブ対応
 
 ## ワークフローツール
 
@@ -109,6 +109,40 @@ AI エージェントの作業効率を高めるためのワークフロー支�
 | `CollectProjectSymbols`     | プロジェクトシンボル（ユーティリティ、依存関係等）を収集 |
 
 オンボーディングでは、プロジェクトの構造理解、コーディング規約の確認、既存メモリの参照などを AI エージェントに案内します。
+
+### アクティブ化とオンボーディングの違い
+
+Smart Edit では「**アクティブ化**」と「**オンボーディング**」は別の概念です。
+
+| 項目 | アクティブ化 (Activation) | オンボーディング (Onboarding) |
+|------|---------------------------|-------------------------------|
+| **目的** | プロジェクトを Smart Edit に登録 | AI がプロジェクトを理解する |
+| **実行タイミング** | 最初の1回（自動または手動） | セッション開始時に推奨 |
+| **結果** | `.smart-edit` ディレクトリ作成、ツールが利用可能に | メモリに情報を保存 |
+| **ツール** | `activate_project` | `onboarding`, `check_onboarding_performed` |
+| **必須か** | **必須**（プロジェクト操作に必要） | 任意（推奨） |
+
+**処理の流れ:**
+
+```
+1. プロジェクトのアクティブ化
+   → activate_project ツール / --project オプション
+   → .smart-edit ディレクトリ作成
+   → ツールが利用可能になる
+       ↓
+2. オンボーディング（任意だが推奨）
+   → check_onboarding_performed → onboarding ツール
+   → AI がプロジェクト構造を学習
+   → メモリに情報を保存（project-symbols など）
+       ↓
+3. 実際の作業
+   → ファイル編集、シンボル検索など
+```
+
+- **アクティブ化**は技術的な準備段階（プロジェクトパスの認識、`.smart-edit` ディレクトリ作成、言語サーバー初期化）
+- **オンボーディング**は AI の学習プロセス（プロジェクト構造把握、既存コード・ライブラリの確認、メモリへの保存）
+
+アクティブ化なしではオンボーディングはできませんが、オンボーディングなしでもアクティブ化されたプロジェクトで作業は可能です。
 
 ## 重複定義チェック機能
 
@@ -260,28 +294,53 @@ SMART_EDIT_SKIP_RUNTIME_INSTALL=1 npx @nogataka/smart-edit start-mcp-server ...
 
 主なオプション:
 
-- `--transport`: `stdio` (既定) / `sse` / `streamable-http` から選択
-- `--enable-web-dashboard`, `--enable-gui-log-window`: Config の設定を一時的に上書き
-- `--log-level`, `--trace-lsp-communication`: ログ詳細度や LSP トレースの制御
-- `--tool-timeout`: ツール実行のタイムアウト秒数
-- `--instructions-override`: MCP クライアントに渡す初期インストラクションをカスタム指定
+| オプション | 説明 |
+|------------|------|
+| `--project <path>` | アクティブ化するプロジェクトパス（省略時はカレントディレクトリ） |
+| `--no-project` | プロジェクトなしで起動（後から `activate_project` で指定） |
+| `--transport` | `stdio`（既定）/ `sse` / `streamable-http` |
+| `--log-level` | ログレベル（DEBUG / INFO / WARNING / ERROR） |
+| `--tool-timeout <秒>` | ツール実行のタイムアウト |
+| `--instructions-override` | MCP クライアントへの初期インストラクション |
 
-サーバー起動後は、必要に応じてダッシュボード (`--enable-web-dashboard`) や GUI ログビューア (`--enable-gui-log-window`) を利用できます。GUI ログは `GuiLogViewer` 経由でブラウザが自動起動し、`logs/` ディレクトリにも出力されます。
+#### Web ダッシュボード
 
-#### Web ダッシュボード機能
+Smart Edit は統合ダッシュボードを提供し、複数プロジェクトのモニタリングと管理を一元化できます。
 
-ダッシュボードは以下の機能を提供します：
+```bash
+# 統合ダッシュボードを起動
+npx @nogataka/smart-edit start-dashboard
+```
 
-| タブ       | 機能                                                                   |
-| ---------- | ---------------------------------------------------------------------- |
-| Dashboard  | プロジェクト概要、リアルタイムメトリクス、最近のアクティビティ         |
-| Logs       | ログ検索・フィルタ（レベル別、ツール名別）、リアルタイムストリーミング |
-| Statistics | API 呼び出し統計、トークン使用量チャート、ライブカウンター             |
-| Sessions   | セッション履歴、JSON エクスポート、過去セッション比較                  |
+ダッシュボードは MCP サーバーとは独立して動作します。複数の MCP サーバーを起動していても、1つのダッシュボードですべてのプロジェクトを管理できます。
 
-- ダークモード / ライトモード切替対応
-- サイドバーナビゲーション（折りたたみ可能）
+```bash
+# 例: 複数プロジェクトの同時利用
+npx @nogataka/smart-edit start-dashboard                                           # ダッシュボード起動
+npx @nogataka/smart-edit start-mcp-server --project ~/projects/app-a               # プロジェクトA
+npx @nogataka/smart-edit start-mcp-server --project ~/projects/app-b               # プロジェクトB
+```
+
+**ダッシュボード機能:**
+
+| タブ | 機能 |
+|------|------|
+| Dashboard | プロジェクト概要、リアルタイムメトリクス |
+| Logs | ログ検索・フィルタ、リアルタイムストリーミング |
+| Statistics | ツール呼び出し統計、トークン使用量チャート |
+| Sessions | セッション履歴、JSON エクスポート |
+
+**特徴:**
+- サイドバーで複数プロジェクトを切り替え
+- MCP サーバー終了後もダッシュボードは継続動作
+- ダークモード / ライトモード切替
 - モバイルレスポンシブ対応
+
+**ダッシュボードオプション:**
+
+| オプション | 説明 |
+|------------|------|
+| `--port <port>` | ダッシュボードのポート番号（デフォルト: 24282） |
 
 #### MCP クライアント（Codex など）からの接続例
 
@@ -391,20 +450,48 @@ Smart Edit は MCP (Model Context Protocol) サーバーとして動作し、様
 
 ### `--project` オプションについて
 
-**`--project` は省略可能です。** MCP サーバー起動時にプロジェクトを指定しなくても、以下の方法でプロジェクトをアクティブ化できます：
+**デフォルトでカレントディレクトリがプロジェクトとして自動アクティブ化されます。** `--project` を明示的に指定した場合はそのパスが使用されます。
 
-1. **チャットから指示**: 「現在のディレクトリをプロジェクトとしてアクティブ化して」と依頼
-2. **`activate_project` ツール**: MCP 経由で `activate_project` ツールを呼び出し
+| 指定方法 | 動作 |
+|----------|------|
+| オプションなし | カレントディレクトリを自動アクティブ化 |
+| `--project /path/to/project` | 指定したパスをアクティブ化 |
+| `--no-project` | プロジェクトなしで起動（後から `activate_project` で指定可能） |
 
 ```bash
-# --project なし（推奨: 柔軟に複数プロジェクトを切り替え可能）
+# オプションなし（カレントディレクトリを自動使用）
 npx @nogataka/smart-edit start-mcp-server --transport stdio
 
-# --project あり（特定プロジェクトに固定する場合）
+# --project あり（特定プロジェクトを指定）
 npx @nogataka/smart-edit start-mcp-server --project /path/to/project --transport stdio
+
+# --no-project（プロジェクトなしで起動、後から指定）
+npx @nogataka/smart-edit start-mcp-server --no-project --transport stdio
 ```
 
-以下の各クライアント設定例では `--project` を省略していますが、必要に応じて追加できます。
+#### `--no-project` で起動した場合の使い方
+
+`--no-project` を指定した場合、最初にプロジェクトをアクティブ化する必要があります。以下のようにチャットで AI に依頼してください：
+
+**プロンプト例:**
+```
+現在のディレクトリをプロジェクトとしてアクティブ化して
+```
+
+```
+/path/to/my-project をアクティブ化して
+```
+
+```
+smart-edit で現在のプロジェクトを登録して
+```
+
+AI が `activate_project` ツールを呼び出し、以下が実行されます：
+- `.smart-edit` ディレクトリの作成
+- 言語サーバーの初期化
+- プロジェクト固有のツールが利用可能に
+
+以下の各クライアント設定例ではデフォルト動作（カレントディレクトリ自動使用）を利用していますが、必要に応じて `--project` や `--no-project` を追加できます。
 
 ---
 
@@ -465,7 +552,7 @@ args = ["-y", "@nogataka/smart-edit@latest", "start-mcp-server", "--context", "c
 2. プロジェクトをアクティブ化するとツールが利用可能に
 
 > **Note**:
-> - `--project` を追加すれば起動時にプロジェクトを指定できます（上記「`--project` オプションについて」を参照）
+> - デフォルトではカレントディレクトリが自動的にプロジェクトとして使用されます（上記「`--project` オプションについて」を参照）
 > - Codex の UI でツール実行が `failed` と表示されても、実際には成功していることがあります。ログ (`~/.codex/log/codex-tui.log`) で確認してください。
 
 ---
@@ -485,7 +572,7 @@ Cursor では `~/.cursor/mcp.json` (または Settings → MCP) で設定しま�
 }
 ```
 
-> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+> デフォルトでカレントディレクトリが使用されます。特定パスを指定する場合: `args` に `"--project", "/path/to/project"` を追加
 
 ---
 
@@ -504,7 +591,7 @@ Windsurf では `~/.codeium/windsurf/mcp_config.json` で設定します。
 }
 ```
 
-> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+> デフォルトでカレントディレクトリが使用されます。特定パスを指定する場合: `args` に `"--project", "/path/to/project"` を追加
 
 ---
 
@@ -528,7 +615,7 @@ Continue では `~/.continue/config.json` の `experimental.modelContextProtocol
 }
 ```
 
-> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+> デフォルトでカレントディレクトリが使用されます。特定パスを指定する場合: `args` に `"--project", "/path/to/project"` を追加
 
 ---
 
@@ -547,7 +634,7 @@ Cline では VS Code の設定 (`settings.json`) または Cline の MCP 設定�
 }
 ```
 
-> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+> デフォルトでカレントディレクトリが使用されます。特定パスを指定する場合: `args` に `"--project", "/path/to/project"` を追加
 
 ---
 
@@ -568,7 +655,7 @@ Zed では `~/.config/zed/settings.json` の `context_servers` に追加しま�
 }
 ```
 
-> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+> デフォルトでカレントディレクトリが使用されます。特定パスを指定する場合: `args` に `"--project", "/path/to/project"` を追加
 
 ---
 
@@ -591,7 +678,7 @@ GitHub Copilot は VS Code 1.102 以降で MCP を公式サポートしていま
 }
 ```
 
-> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+> デフォルトでカレントディレクトリが使用されます。特定パスを指定する場合: `args` に `"--project", "/path/to/project"` を追加
 
 #### JetBrains IDE での設定
 
@@ -631,7 +718,7 @@ Claude Desktop (Windows/macOS) では `claude_desktop_config.json` に MCP サ�
   }
   ```
   - `dist/cli.js` を呼び出す前に `pnpm build` を実行し、`dist/` に成果物を生成しておいてください。
-  - `--project` は省略可能です（上記「`--project` オプションについて」を参照）。
+  - デフォルトでカレントディレクトリが使用されます。`--no-project` を指定するとプロジェクトなしで起動できます。
 
 - **Docker イメージを使う場合（PoC）**
   ```json
@@ -655,7 +742,7 @@ Claude Desktop (Windows/macOS) では `claude_desktop_config.json` に MCP サ�
 - Windows でパスを指定する場合はバックスラッシュを二重にする (`\\`) か、スラッシュ (`/`) を利用してください。
 - 設定を保存したら Claude Desktop を完全終了（システムトレイのアイコンも終了）し、再起動すると smart-edit のツールが利用可能になります。
 - `desktop-app` コンテキストは Claude Desktop 向けにチューニングされています。必要に応じて `~/.smart-edit/contexts/` 配下に自作コンテキストを配置し、`--context` で差し替え可能です。
-- ダッシュボードを利用したい場合は Config 側で `web_dashboard: true` を有効にしてください。ブラウザが自動起動しない場合は `http://localhost:24282/dashboard/index.html` へアクセスできます。
+- ダッシュボードを利用したい場合は別ターミナルで `npx @nogataka/smart-edit start-dashboard` を実行してください。ブラウザで `http://localhost:24282/dashboard/` にアクセスすると統合ダッシュボードが表示されます。
 - MCP サーバーを終了するにはチャットを閉じるだけでなく、別コンソールから `smart-edit` プロセスを停止するか、CLI のログを確認しながら Ctrl+C で停止してください。
 
 Claude Desktop の MCP 設定については [公式クイックスタート](https://modelcontextprotocol.io/quickstart/user) も参考になります。

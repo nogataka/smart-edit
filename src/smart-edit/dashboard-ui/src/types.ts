@@ -4,6 +4,15 @@ export interface LogMessage {
   level: 'debug' | 'info' | 'warning' | 'error' | 'default';
 }
 
+export interface InstanceInfo {
+  id: string;
+  port: number;
+  project: string | null;
+  pid: number;
+  startedAt: string;
+  transport: 'stdio' | 'sse' | 'streamable-http';
+}
+
 export interface ToolStats {
   num_times_called: number;
   input_tokens: number;

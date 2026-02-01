@@ -116,7 +116,10 @@ export const en = {
   sidebar: {
     expand: 'Expand sidebar',
     collapse: 'Collapse sidebar',
-    shutdownConfirm: 'This will fully terminate the Smart Edit server.'
+    shutdownConfirm: 'This will fully terminate the Smart Edit server.',
+    project: 'Project',
+    noProject: 'No project active',
+    instances: 'Projects'
   },
 
   // Theme

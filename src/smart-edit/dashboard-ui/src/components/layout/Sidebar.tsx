@@ -1,48 +1,8 @@
 import { useDashboard } from '../../context/DashboardContext';
+import { useMultiInstance } from '../../context/MultiInstanceContext';
 import { useTranslation } from '../../i18n';
 import { shutdownServer } from '../../utils/api';
-import type { NavigationView } from '../../types';
-
-function DashboardIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" />
-      <rect x="14" y="3" width="7" height="7" />
-      <rect x="14" y="14" width="7" height="7" />
-      <rect x="3" y="14" width="7" height="7" />
-    </svg>
-  );
-}
-
-function LogsIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <path d="M16 13H8" />
-      <path d="M16 17H8" />
-      <path d="M10 9H8" />
-    </svg>
-  );
-}
-
-function StatsIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 20V10" />
-      <path d="M12 20V4" />
-      <path d="M6 20v-6" />
-    </svg>
-  );
-}
-
-function SessionsIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
+import type { InstanceInfo } from '../../types';
 
 function LogoIcon() {
   return (
@@ -69,18 +29,10 @@ function LogoIcon() {
   );
 }
 
-function ChevronLeftIcon() {
+function FolderIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M15 18l-6-6 6-6" />
-    </svg>
-  );
-}
-
-function ChevronRightIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 18l6-6-6-6" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
@@ -94,31 +46,39 @@ function PowerIcon() {
   );
 }
 
-interface NavItem {
-  id: NavigationView;
-  labelKey: string;
-  icon: React.ReactNode;
+function getProjectNameFromPath(projectPath: string | null): string | null {
+  if (!projectPath) return null;
+  return projectPath.split('/').pop() || null;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', labelKey: 'nav.dashboard', icon: <DashboardIcon /> },
-  { id: 'logs', labelKey: 'nav.logs', icon: <LogsIcon /> },
-  { id: 'stats', labelKey: 'nav.statistics', icon: <StatsIcon /> },
-  { id: 'sessions', labelKey: 'nav.sessions', icon: <SessionsIcon /> }
-];
+function InstanceItem({ instance, isActive, onClick }: {
+  instance: InstanceInfo;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const projectName = getProjectNameFromPath(instance.project);
+
+  return (
+    <button
+      className={`instance-item ${isActive ? 'active' : ''}`}
+      onClick={onClick}
+      title={instance.project || 'No project'}
+    >
+      <span className={`instance-indicator ${isActive ? 'active' : ''}`} />
+      <FolderIcon />
+      <span className="instance-name">
+        {projectName || 'No project'}
+      </span>
+    </button>
+  );
+}
 
 export function Sidebar() {
   const { state, dispatch } = useDashboard();
-  const { currentView, sidebarCollapsed } = state;
+  const { activeProject } = state;
+  const { state: multiState, setActiveInstance } = useMultiInstance();
+  const { instances, activeInstanceId, isMultiInstanceMode } = multiState;
   const { t } = useTranslation();
-
-  const handleNavClick = (view: NavigationView) => {
-    dispatch({ type: 'SET_CURRENT_VIEW', view });
-  };
-
-  const handleToggleSidebar = () => {
-    dispatch({ type: 'TOGGLE_SIDEBAR' });
-  };
 
   const handleShutdown = () => {
     if (window.confirm(t('sidebar.shutdownConfirm'))) {
@@ -128,47 +88,65 @@ export function Sidebar() {
     }
   };
 
+  const projectName = activeProject ? activeProject.split('/').pop() : null;
+
   return (
-    <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+    <aside className="sidebar">
       <div className="sidebar-header">
         <div className="sidebar-logo">
           <span className="sidebar-logo-icon"><LogoIcon /></span>
           <span className="sidebar-logo-text">Smart Edit</span>
         </div>
-        <button
-          className="sidebar-toggle"
-          onClick={handleToggleSidebar}
-          title={sidebarCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
-        >
-          {sidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-        </button>
       </div>
 
-      <nav className="sidebar-nav">
-        {NAV_ITEMS.map((item) => {
-          const label = t(item.labelKey);
-          return (
-            <button
-              key={item.id}
-              className={`nav-item ${currentView === item.id ? 'active' : ''}`}
-              onClick={() => handleNavClick(item.id)}
-              title={sidebarCollapsed ? label : undefined}
-            >
-              <span className="nav-item-icon">{item.icon}</span>
-              <span className="nav-item-label">{label}</span>
-            </button>
-          );
-        })}
-      </nav>
+      <div className="sidebar-content">
+        {/* Multi-instance mode: show instance list */}
+        {isMultiInstanceMode && instances.length > 0 ? (
+          <div className="sidebar-section">
+            <h3 className="sidebar-section-title">{t('sidebar.instances')}</h3>
+            <div className="instance-list">
+              {instances.map((instance) => (
+                <InstanceItem
+                  key={instance.id}
+                  instance={instance}
+                  isActive={instance.id === activeInstanceId}
+                  onClick={() => setActiveInstance(instance.id)}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* Single instance mode: show current project */
+          <div className="sidebar-section">
+            <h3 className="sidebar-section-title">{t('sidebar.project')}</h3>
+            {activeProject ? (
+              <div className="project-info">
+                <div className="project-name">
+                  <FolderIcon />
+                  <span className="project-name-text" title={activeProject}>
+                    {projectName}
+                  </span>
+                </div>
+                <div className="project-path" title={activeProject}>
+                  {activeProject}
+                </div>
+              </div>
+            ) : (
+              <div className="project-empty">
+                {t('sidebar.noProject')}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="sidebar-footer">
         <button
-          className="nav-item shutdown-btn"
+          className="sidebar-action-btn shutdown-btn"
           onClick={handleShutdown}
-          title={sidebarCollapsed ? t('nav.shutdown') : undefined}
         >
-          <span className="nav-item-icon"><PowerIcon /></span>
-          <span className="nav-item-label">{t('nav.shutdown')}</span>
+          <PowerIcon />
+          <span>{t('nav.shutdown')}</span>
         </button>
       </div>
     </aside>
