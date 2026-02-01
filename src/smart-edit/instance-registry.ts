@@ -33,8 +33,10 @@ interface InstanceRegistryData {
 }
 
 // Compute paths dynamically to respect runtime HOME changes (important for testing)
+// Use process.env.HOME/USERPROFILE first as os.homedir() may cache the value
 function getSmartEditDir(): string {
-  return path.join(os.homedir(), SMART_EDIT_MANAGED_DIR_NAME);
+  const home = process.env.HOME ?? process.env.USERPROFILE ?? os.homedir();
+  return path.join(home, SMART_EDIT_MANAGED_DIR_NAME);
 }
 
 function getInstancesFilePath(): string {
@@ -56,56 +58,64 @@ function ensureDirectoryExists(filePath: string): void {
 }
 
 function acquireLock(): boolean {
-  const lockFile = getLockFilePath();
-  ensureDirectoryExists(lockFile);
-  const startTime = Date.now();
+  try {
+    const lockFile = getLockFilePath();
+    ensureDirectoryExists(lockFile);
+    const startTime = Date.now();
 
-  while (Date.now() - startTime < LOCK_TIMEOUT_MS) {
-    try {
-      fs.writeFileSync(lockFile, String(process.pid), { flag: 'wx' });
-      return true;
-    } catch (error) {
-      const err = error as NodeJS.ErrnoException;
-      if (err.code === 'EEXIST') {
-        // Lock file exists, check if the process is still alive
-        try {
-          const lockPid = Number.parseInt(fs.readFileSync(lockFile, 'utf-8').trim(), 10);
-          if (!Number.isNaN(lockPid)) {
-            try {
-              // Check if process is alive (signal 0 doesn't kill, just checks)
-              process.kill(lockPid, 0);
-            } catch {
-              // Process is dead, remove stale lock
+    while (Date.now() - startTime < LOCK_TIMEOUT_MS) {
+      try {
+        fs.writeFileSync(lockFile, String(process.pid), { flag: 'wx' });
+        return true;
+      } catch (error) {
+        const err = error as NodeJS.ErrnoException;
+        if (err.code === 'EEXIST') {
+          // Lock file exists, check if the process is still alive
+          try {
+            const lockPid = Number.parseInt(fs.readFileSync(lockFile, 'utf-8').trim(), 10);
+            if (!Number.isNaN(lockPid)) {
               try {
-                fs.unlinkSync(lockFile);
-                continue;
+                // Check if process is alive (signal 0 doesn't kill, just checks)
+                process.kill(lockPid, 0);
               } catch {
-                // Ignore unlink errors
+                // Process is dead, remove stale lock
+                try {
+                  fs.unlinkSync(lockFile);
+                  continue;
+                } catch {
+                  // Ignore unlink errors
+                }
               }
             }
-          }
-        } catch {
-          // Can't read lock file, try to remove it
-          try {
-            fs.unlinkSync(lockFile);
-            continue;
           } catch {
-            // Ignore unlink errors
+            // Can't read lock file, try to remove it
+            try {
+              fs.unlinkSync(lockFile);
+              continue;
+            } catch {
+              // Ignore unlink errors
+            }
           }
+          // Brief busy-wait before retry
+          const waitUntil = Date.now() + Math.min(LOCK_RETRY_INTERVAL_MS, LOCK_TIMEOUT_MS - (Date.now() - startTime));
+          while (Date.now() < waitUntil) {
+            // Busy wait - acceptable since lock contention should be rare
+          }
+          continue;
         }
-        // Brief busy-wait before retry (Atomics.wait requires SharedArrayBuffer which may not be available)
-        const waitUntil = Date.now() + Math.min(LOCK_RETRY_INTERVAL_MS, LOCK_TIMEOUT_MS - (Date.now() - startTime));
-        while (Date.now() < waitUntil) {
-          // Busy wait - this is acceptable since lock contention should be rare
-        }
-        continue;
+        // For other errors (EACCES, ENOENT, etc.), give up on locking
+        logger.warn(`Lock acquisition failed with error: ${err.code}`, err);
+        return false;
       }
-      throw error;
     }
-  }
 
-  logger.warn('Failed to acquire lock for instance registry');
-  return false;
+    logger.warn('Failed to acquire lock for instance registry (timeout)');
+    return false;
+  } catch (error) {
+    // Catch any unexpected errors (e.g., from ensureDirectoryExists)
+    logger.warn('Unexpected error during lock acquisition', error instanceof Error ? error : undefined);
+    return false;
+  }
 }
 
 function releaseLock(): void {
