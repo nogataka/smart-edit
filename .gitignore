@@ -21,5 +21,8 @@ coverage
 .DS_Store
 .easy-sdd/
 .claude/
-docs/
+
+docs/*
+!docs/public
+
 .smart-edit/

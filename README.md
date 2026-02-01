@@ -1,17 +1,122 @@
 # Smart Edit
 
-Smart Edit は、TypeScript / Node.js 上で動作する MCP (Model Context Protocol) サーバーです。SmartLSP ベースの言語サーバー管理や Smart-Edit 固有のツール群を TypeScript で実装しています。
+![Smart Edit Dashboard](docs/public/assets/screenshot.png)
+
+Smart Edit は、TypeScript / Node.js 上で動作する MCP (Model Context Protocol) サーバーです。独自の言語サーバー管理システム「SmartLSP」と Smart-Edit 固有のツール群を TypeScript で実装しています。
+
+## SmartLSP について
+
+SmartLSP は、Smart Edit に組み込まれた言語サーバー管理システムです。AI コーディングツールが複数のプログラミング言語を扱う際に必要となる LSP (Language Server Protocol) サーバーの管理を自動化します。
+
+### 主な特徴
+
+| 特徴                         | 説明                                                                                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **23言語サポート**           | Bash, C/C++, C#, Clojure, Dart, Erlang, Go, Java, Kotlin, Lua, Nix, PHP, Python (2種), R, Ruby (2種), Rust, Swift, Terraform, TypeScript/JavaScript, Vue, Zig |
+| **オンデマンドダウンロード** | 言語サーバーは必要になったタイミングで自動的にダウンロード・インストールされます。起動時に全てをダウンロードする必要はありません                              |
+| **クロスプラットフォーム**   | macOS (Intel/Apple Silicon)、Linux (x64/ARM64)、Windows (x64) に対応。プラットフォームに応じた適切なバイナリを自動選択                                        |
+| **統一API**                  | 異なる言語サーバーを同一のインターフェースで操作可能。初期化、診断取得、コード補完、定義ジャンプなどを共通の方法で呼び出せます                                |
+| **依存関係の自動管理**       | npm、pip、gem、go install など、各言語のパッケージマネージャーを通じた依存関係を自動的に解決                                                                  |
+
+### 動作の流れ
+
+```
+1. プロジェクトの言語を検出（project.yml または自動検出）
+       ↓
+2. 該当する言語サーバーが未インストールの場合、自動ダウンロード
+       ↓
+3. 言語サーバーを起動し、LSP 通信を開始
+       ↓
+4. AI エージェントが LSP 機能（診断、補完、定義参照など）を利用
+```
+
+SmartLSP により、ユーザーは言語サーバーのインストールや設定を意識することなく、AI による高精度なコード支援を受けることができます。
+
+## メモリ機能
+
+Smart Edit は、AI エージェントがプロジェクトに関する情報を永続的に保存・参照できる「メモリ機能」を提供します。
+
+### 主な特徴
+
+| 特徴 | 説明 |
+|------|------|
+| **永続化** | セッション間で完全に永続化され、IDE 再起動や PC 再起動後も保持されます |
+| **プロジェクト独立** | メモリはプロジェクトごとに独立しており、他プロジェクトとは共有されません |
+| **Markdown 形式** | 人間が読みやすい Markdown ファイルとして保存されます |
+| **名前付き管理** | 「kickoff」「retro」「architecture」など、用途に応じた名前でメモリを管理 |
+
+### 利用可能なツール
+
+| ツール | 説明 |
+|--------|------|
+| `WriteMemory` | 名前付きメモリを保存 |
+| `ReadMemory` | メモリの内容を読み込み |
+| `ListMemories` | 保存済みメモリの一覧を取得 |
+| `DeleteMemory` | メモリを削除 |
+
+保存場所: `{プロジェクトルート}/.smart-edit/memories/`
+
+## プロンプト/モード/コンテキスト システム
+
+Smart Edit は、AI の振る舞いをカスタマイズするための柔軟なテンプレートシステムを提供します。
+
+### 構成要素
+
+| 要素 | 説明 | 保存場所 |
+|------|------|----------|
+| **コンテキスト** | 接続先クライアント（Claude Code, Codex, Desktop など）に応じた設定 | `~/.smart-edit/contexts/` |
+| **モード** | AI の動作モード（editor, reviewer, architect など）を定義 | `~/.smart-edit/modes/` |
+| **プロンプトテンプレート** | 各ツールの出力形式やインストラクションを定義 | `~/.smart-edit/prompt_templates/` |
+
+### カスタマイズの流れ
+
+```
+1. 内蔵テンプレートを確認
+   smart-edit mode list / smart-edit context list
+       ↓
+2. テンプレートをコピーして編集
+   smart-edit mode create --from-internal default-editor
+       ↓
+3. MCP サーバー起動時に指定
+   --context ide-assistant --mode default-editor
+```
+
+## Web ダッシュボード
+
+リアルタイムでセッション情報を可視化する Web ベースのダッシュボードを提供します。
+
+### 機能一覧
+
+| タブ | 機能 |
+|------|------|
+| **Dashboard** | プロジェクト概要、リアルタイムメトリクス、最近のアクティビティ |
+| **Logs** | ログ検索・フィルタ（レベル別、ツール名別）、リアルタイムストリーミング |
+| **Statistics** | API 呼び出し統計、トークン使用量チャート、ライブカウンター |
+| **Sessions** | セッション履歴、JSON エクスポート、過去セッション比較 |
+
+- `--enable-web-dashboard` オプションで有効化
+- ダークモード / ライトモード切替対応
+- モバイルレスポンシブ対応
+
+## ワークフローツール
+
+AI エージェントの作業効率を高めるためのワークフロー支援ツールを提供します。
+
+| ツール | 説明 |
+|--------|------|
+| `Onboarding` | プロジェクト初回参加時のオンボーディングプロセスを支援 |
+| `CheckOnboardingPerformed` | オンボーディングが完了しているか確認 |
+
+オンボーディングでは、プロジェクトの構造理解、コーディング規約の確認、既存メモリの参照などを AI エージェントに案内します。
 
 ## 主な構成
 
 | ディレクトリ / ファイル    | 概要                                                        |
 | -------------------------- | ----------------------------------------------------------- |
 | `src/smart-edit`           | エージェント本体、CLI、各種ツール・コンフィグ周りのロジック |
-| `src/smart-lsp`            | SmartLSP 連携と言語サーバーごとのランタイム管理実装         |
+| `src/smart-lsp`            | SmartLSP 本体：23言語サーバーの自動管理・LSP通信実装        |
 | `src/smart-edit/resources` | Smart-Edit が自動生成・参照する YAML テンプレート群         |
 | `test/`                    | Vitest によるユニットテスト・スモークテスト                 |
-| `docs/`                    | 言語サーバー対応状況などの資料                              |
-| `tsconfig*.json`           | ビルド・テスト・Lint 用 TypeScript 設定                     |
 
 ## 環境要件
 
@@ -186,35 +291,50 @@ Smart Edit はプロジェクト固有のメモリ機能を提供します。AI 
 
 以下の言語サーバーに対応しています：
 
-| 言語                    | サーバー                   | バージョン           | ダウンロード元                    | 備考                               |
-| ----------------------- | -------------------------- | -------------------- | --------------------------------- | ---------------------------------- |
-| Bash                    | bash-language-server       | 5.6.0                | npm                               | Node.js 20 以上必須                |
-| C / C++                 | clangd                     | 19.1.2               | GitHub Releases                   | LLVM プロジェクト                  |
-| C#                      | csharp-language-server     | 5.0.0-1.25329.6      | NuGet                             | .NET ランタイム必要                |
-| Clojure                 | clojure-lsp                | latest               | GitHub Releases                   | Clojure 開発環境                   |
-| Dart                    | Dart SDK                   | 3.10.4               | Google Storage                    | Flutter SDK に同梱                 |
-| Erlang                  | erlang_ls                  | (PATH 検出)          | 外部インストール                  | Erlang/OTP ランタイム必要          |
-| Go                      | gopls                      | latest               | `go install`                      | 公式 Go チームによる実装           |
-| Java                    | Eclipse JDT.LS             | 1.42.0               | GitHub (vscode-java)              | Java 21 以上必須                   |
-| Kotlin                  | kotlin-language-server     | 0.253.10629          | JetBrains CDN                     | JVM ランタイム必要                 |
-| Lua                     | lua-language-server        | 3.15.0               | GitHub Releases                   | Lua 5.1〜5.5、LuaJIT 対応          |
-| Nix                     | nixd                       | (PATH / nix profile) | 外部インストール                  | Nix 式のサポート                   |
-| PHP                     | Intelephense               | 1.16.4               | npm                               | 高機能 PHP サーバー                |
-| Python                  | Jedi Language Server       | (PyPI)               | pip                               | 軽量・高速                         |
-| Python                  | Pyright                    | (PyPI)               | pip                               | Microsoft 製・型チェック強化       |
-| R                       | R Language Server          | (CRAN)               | R package                         | CRAN パッケージ                    |
-| Ruby                    | Ruby LSP                   | (gem)                | RubyGems                          | Shopify 製・高速                   |
-| Ruby                    | Solargraph                 | (gem)                | RubyGems                          | 従来からの定番                     |
-| Rust                    | rust-analyzer              | (rustup)             | rustup component                  | 公式推奨                           |
-| Swift                   | SourceKit-LSP              | (PATH 検出)          | Xcode / Swift Toolchain           | Apple 公式                         |
-| Terraform               | terraform-ls               | 0.38.3               | HashiCorp Releases                | HashiCorp 公式、Actions block 対応 |
-| TypeScript / JavaScript | typescript-language-server | 5.1.3 (TS 5.9.3)     | npm                               | tsserver ラッパー                  |
-| Vue                     | VTS (Volar)                | 0.3.0                | npm (@vtsls/language-server)      | Vue 3 対応、TS 必須                |
-| Zig                     | zls                        | (PATH 検出)          | 外部インストール                  | Zig 公式                           |
+| 言語                    | サーバー                   | バージョン           | ダウンロード元               | 備考                               |
+| ----------------------- | -------------------------- | -------------------- | ---------------------------- | ---------------------------------- |
+| Bash                    | bash-language-server       | 5.6.0                | npm                          | Node.js 20 以上必須                |
+| C / C++                 | clangd                     | 19.1.2               | GitHub Releases              | LLVM プロジェクト                  |
+| C#                      | csharp-language-server     | 5.0.0-1.25329.6      | NuGet                        | .NET ランタイム必要                |
+| Clojure                 | clojure-lsp                | latest               | GitHub Releases              | Clojure 開発環境                   |
+| Dart                    | Dart SDK                   | 3.10.4               | Google Storage               | Flutter SDK に同梱                 |
+| Erlang                  | erlang_ls                  | (PATH 検出)          | 外部インストール             | Erlang/OTP ランタイム必要          |
+| Go                      | gopls                      | latest               | `go install`                 | 公式 Go チームによる実装           |
+| Java                    | Eclipse JDT.LS             | 1.42.0               | GitHub (vscode-java)         | Java 21 以上必須                   |
+| Kotlin                  | kotlin-language-server     | 0.253.10629          | JetBrains CDN                | JVM ランタイム必要                 |
+| Lua                     | lua-language-server        | 3.15.0               | GitHub Releases              | Lua 5.1〜5.5、LuaJIT 対応          |
+| Nix                     | nixd                       | (PATH / nix profile) | 外部インストール             | Nix 式のサポート                   |
+| PHP                     | Intelephense               | 1.16.4               | npm                          | 高機能 PHP サーバー                |
+| Python                  | Jedi Language Server       | (PyPI)               | pip                          | 軽量・高速                         |
+| Python                  | Pyright                    | (PyPI)               | pip                          | Microsoft 製・型チェック強化       |
+| R                       | R Language Server          | (CRAN)               | R package                    | CRAN パッケージ                    |
+| Ruby                    | Ruby LSP                   | (gem)                | RubyGems                     | Shopify 製・高速                   |
+| Ruby                    | Solargraph                 | (gem)                | RubyGems                     | 従来からの定番                     |
+| Rust                    | rust-analyzer              | (rustup)             | rustup component             | 公式推奨                           |
+| Swift                   | SourceKit-LSP              | (PATH 検出)          | Xcode / Swift Toolchain      | Apple 公式                         |
+| Terraform               | terraform-ls               | 0.38.3               | HashiCorp Releases           | HashiCorp 公式、Actions block 対応 |
+| TypeScript / JavaScript | typescript-language-server | 5.1.3 (TS 5.9.3)     | npm                          | tsserver ラッパー                  |
+| Vue                     | VTS (Volar)                | 0.3.0                | npm (@vtsls/language-server) | Vue 3 対応、TS 必須                |
+| Zig                     | zls                        | (PATH 検出)          | 外部インストール             | Zig 公式                           |
 
 **除外**: AL Language Server, elixir_tools, OmniSharp（TypeScript 版では対象外）
 
 **バージョン更新日**: 2026-02-01
+
+#### 実行方式の分類
+
+言語サーバーは以下の方式で管理されます：
+
+| 方式 | 説明 | 対象サーバー |
+|------|------|-------------|
+| **バイナリDL型** | プラットフォーム別バイナリを自動ダウンロード | Clangd, Dart SDK, Lua, Zig, Terraform |
+| **npm型** | npm でパッケージをインストール | TypeScript, Bash, PHP, Vue |
+| **システム依存型** | システムにインストール済みのコマンドを使用 | Pyright, Jedi, gopls, SourceKit, Erlang, Nix |
+| **システム依存型(半自動)** | 未検出時に自動インストール | rust-analyzer (rustup経由) |
+| **言語パッケージ型** | 各言語のパッケージマネージャーでインストール | Ruby LSP, Solargraph (gem), R (CRAN) |
+| **複合ダウンロード型** | 複数コンポーネントをダウンロード・展開 | Eclipse JDT (Java), Kotlin |
+
+詳細は [LSPサーバー実行方式調査](docs/public/lsp_server_execution_methods.md) および [LSPサーバー実行方式一覧表](docs/public/lsp_servers_execution_type_table.md) を参照してください。
 
 ### Claude Code への接続手順
 
