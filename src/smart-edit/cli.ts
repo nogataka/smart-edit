@@ -620,6 +620,12 @@ export function createSmartEditCli(options: CreateCliOptions = {}): Command {
         await handleStartMcpServer(opts, normalizedProjectArg);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        const stack = error instanceof Error ? error.stack : undefined;
+        // Log to stderr for debugging (visible in CI logs)
+        console.error('[start-mcp-server] Error:', message);
+        if (stack) {
+          console.error('[start-mcp-server] Stack:', stack);
+        }
         this.error(`${message}\n`, { exitCode: 1 });
       }
     });
