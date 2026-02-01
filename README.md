@@ -4,6 +4,30 @@
 
 Smart Edit は、TypeScript / Node.js 上で動作する MCP (Model Context Protocol) サーバーです。独自の言語サーバー管理システム「SmartLSP」と Smart-Edit 固有のツール群を TypeScript で実装しています。
 
+## 🚀 クイックスタート
+
+### Claude Code で使う
+
+プロジェクトのルートディレクトリで以下を実行：
+
+```bash
+claude mcp add smart-edit -- npx -y @nogataka/smart-edit@latest start-mcp-server --transport stdio
+```
+
+これで Smart Edit が MCP サーバーとして登録され、Claude Code から利用可能になります。
+
+### ダッシュボードを起動
+
+複数プロジェクトを統合管理する Web ダッシュボード：
+
+```bash
+npx -y @nogataka/smart-edit@latest start-dashboard
+```
+
+ブラウザで `http://localhost:24282` を開くと、接続中のプロジェクト一覧とログをリアルタイムで確認できます。
+
+---
+
 ## SmartLSP について
 
 SmartLSP は、Smart Edit に組み込まれた言語サーバー管理システムです。AI コーディングツールが複数のプログラミング言語を扱う際に必要となる LSP (Language Server Protocol) サーバーの管理を自動化します。
