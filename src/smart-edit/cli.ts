@@ -390,14 +390,16 @@ async function handleStartMcpServer(options: StartMcpServerOpts, projectArg?: st
         logger.info(`Streamable HTTP MCP server started: ${server.url.href}`);
         logger.info('Press Ctrl+C to exit.');
 
-        // Register instance
-        registeredInstance = registerInstance({
-          port: serverPort,
-          project,
-          pid: process.pid,
-          transport: 'streamable-http'
-        });
-        logger.info(`Registered instance ${registeredInstance.id} in registry`);
+        // Register instance (skip in test environment)
+        if (!process.env.SMART_EDIT_SKIP_EDITOR) {
+          registeredInstance = registerInstance({
+            port: serverPort,
+            project,
+            pid: process.pid,
+            transport: 'streamable-http'
+          });
+          logger.info(`Registered instance ${registeredInstance.id} in registry`);
+        }
 
         await new Promise<void>((resolve) => {
           const shutdown = async (): Promise<void> => {
@@ -422,15 +424,17 @@ async function handleStartMcpServer(options: StartMcpServerOpts, projectArg?: st
         const server = await createSmartEditStdioServer(factory, serverOptions);
         logger.info('STDIO MCP server started. Press Ctrl+C to exit.');
 
-        // For stdio transport, find an available port for the dashboard API
-        const dashboardPort = findAvailablePort();
-        registeredInstance = registerInstance({
-          port: dashboardPort,
-          project,
-          pid: process.pid,
-          transport: 'stdio'
-        });
-        logger.info(`Registered instance ${registeredInstance.id} in registry (dashboard port: ${dashboardPort})`);
+        // For stdio transport, find an available port for the dashboard API (skip in test environment)
+        if (!process.env.SMART_EDIT_SKIP_EDITOR) {
+          const dashboardPort = findAvailablePort();
+          registeredInstance = registerInstance({
+            port: dashboardPort,
+            project,
+            pid: process.pid,
+            transport: 'stdio'
+          });
+          logger.info(`Registered instance ${registeredInstance.id} in registry (dashboard port: ${dashboardPort})`);
+        }
 
         await new Promise<void>((resolve) => {
           let settled = false;
