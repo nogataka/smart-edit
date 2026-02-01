@@ -146,7 +146,10 @@ function readRegistry(): InstanceRegistryData {
 function writeRegistry(data: InstanceRegistryData): void {
   const instancesFile = getInstancesFilePath();
   ensureDirectoryExists(instancesFile);
-  fs.writeFileSync(instancesFile, JSON.stringify(data, null, 2), 'utf-8');
+  // Atomic write: write to temp file first, then rename
+  const tempFile = `${instancesFile}.tmp`;
+  fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
+  fs.renameSync(tempFile, instancesFile);
 }
 
 function isProcessAlive(pid: number): boolean {
