@@ -86,6 +86,18 @@ describe('Smart-Edit CLI', () => {
   });
 
   it('starts the MCP server successfully with the embedded SmartEditAgent', async () => {
+    // Create a minimal test project directory with a source file and project.yml
+    const testProjectDir = path.join(currentHome!, 'test-project');
+    const srcDir = path.join(testProjectDir, 'src');
+    const smartEditDir = path.join(testProjectDir, '.smart-edit');
+    await fs.promises.mkdir(srcDir, { recursive: true });
+    await fs.promises.mkdir(smartEditDir, { recursive: true });
+    await fs.promises.writeFile(path.join(srcDir, 'index.ts'), 'export const hello = "world";\n');
+    await fs.promises.writeFile(
+      path.join(smartEditDir, 'project.yml'),
+      'project_name: test-project\nlanguage: typescript\n'
+    );
+
     const stdout: string[] = [];
     const stderr: string[] = [];
     const infoLogs: string[] = [];
@@ -105,7 +117,7 @@ describe('Smart-Edit CLI', () => {
     });
 
     const commandPromise = program.parseAsync(
-      ['start-mcp-server', '--transport', 'streamable-http', '--host', '127.0.0.1', '--port', '0'],
+      ['start-mcp-server', '--transport', 'streamable-http', '--host', '127.0.0.1', '--port', '0', testProjectDir],
       { from: 'user' }
     );
 
