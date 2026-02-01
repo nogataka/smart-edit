@@ -1,10 +1,13 @@
 import { useEffect } from 'react';
 import { useDashboardState } from '../../context/DashboardContext';
+import { useTranslation } from '../../i18n';
 import { useToolStats } from '../../hooks/useToolStats';
 import { useRealTimeStats, formatNumber } from '../../hooks/useRealTimeStats';
+import { useActivityHistory } from '../../hooks/useActivityHistory';
 import { MetricCard } from './MetricCard';
 import { LiveCounter } from './LiveCounter';
 import { TokenDistributionChart } from './TokenDistributionChart';
+import { ActivityChart } from './ActivityChart';
 import { Card } from '../common/Card';
 import { PieChart } from '../StatsSection/PieChart';
 
@@ -37,8 +40,10 @@ function CallIcon() {
 
 export function StatsPanel() {
   const { toolStats } = useDashboardState();
+  const { t } = useTranslation();
   const { loadStats, clearStats, isLoading, tokenEstimatorName } = useToolStats();
   const realTimeStats = useRealTimeStats(toolStats);
+  const { history: activityHistory, clearHistory: clearActivityHistory } = useActivityHistory(toolStats);
 
   useEffect(() => {
     if (!toolStats) {
@@ -60,23 +65,23 @@ export function StatsPanel() {
       <div className="stats-panel-header">
         <div className="stats-panel-actions">
           <button className="btn" onClick={loadStats} disabled={isLoading}>
-            {isLoading ? 'Loading...' : 'Refresh'}
+            {isLoading ? t('stats.loading') : t('stats.refresh')}
           </button>
           <button className="btn" onClick={clearStats}>
-            Clear Stats
+            {t('stats.clearStats')}
           </button>
         </div>
         {tokenEstimatorName && (
-          <span className="stats-estimator">Token estimator: {tokenEstimatorName}</span>
+          <span className="stats-estimator">{t('stats.tokenEstimator', { name: tokenEstimatorName })}</span>
         )}
       </div>
 
       {!toolStats || Object.keys(toolStats).length === 0 ? (
         <Card>
           <div className="stats-empty">
-            <p>No tool stats collected yet.</p>
+            <p>{t('stats.noStatsYet')}</p>
             <p className="stats-empty-hint">
-              Tool statistics will appear here once tools are used during the session.
+              {t('stats.noStatsHint')}
             </p>
           </div>
         </Card>
@@ -84,53 +89,61 @@ export function StatsPanel() {
         <>
           <div className="metrics-grid">
             <MetricCard
-              title="Total Calls"
+              title={t('stats.totalCalls')}
               value={<LiveCounter value={realTimeStats.totalCalls} />}
-              subtitle={`${realTimeStats.toolCount} tools used`}
+              subtitle={t('dashboard.toolsUsed', { count: realTimeStats.toolCount })}
               icon={<CallIcon />}
             />
             <MetricCard
-              title="Input Tokens"
+              title={t('stats.inputTokens')}
               value={<LiveCounter value={realTimeStats.totalInputTokens} formatter={formatNumber} />}
-              subtitle="Total input"
+              subtitle={t('stats.totalInput')}
               icon={<TokenIcon />}
             />
             <MetricCard
-              title="Output Tokens"
+              title={t('stats.outputTokens')}
               value={<LiveCounter value={realTimeStats.totalOutputTokens} formatter={formatNumber} />}
-              subtitle="Total output"
+              subtitle={t('stats.totalOutput')}
               icon={<TokenIcon />}
             />
             <MetricCard
-              title="Most Used Tool"
+              title={t('stats.mostUsedTool')}
               value={realTimeStats.mostUsedTool?.name || '-'}
               subtitle={
-                realTimeStats.mostUsedTool ? `${realTimeStats.mostUsedTool.calls} calls` : undefined
+                realTimeStats.mostUsedTool
+                  ? t('dashboard.calls', { count: realTimeStats.mostUsedTool.calls })
+                  : undefined
               }
               icon={<ToolIcon />}
             />
           </div>
 
+          <div className="stats-charts-row">
+            <Card title={t('stats.activityOverTime')}>
+              <ActivityChart history={activityHistory} onClear={clearActivityHistory} />
+            </Card>
+          </div>
+
           <div className="stats-charts-grid">
-            <Card title="Token Distribution by Tool">
+            <Card title={t('stats.tokenDistribution')}>
               <TokenDistributionChart toolStats={toolStats} />
             </Card>
 
-            <Card title="Call Distribution">
+            <Card title={t('stats.callDistribution')}>
               {statsData && <PieChart title="" labels={statsData.names} data={statsData.counts} />}
             </Card>
           </div>
 
           <div className="stats-charts-row">
-            <Card title="Token Breakdown">
+            <Card title={t('stats.tokenBreakdown')}>
               <div className="pie-charts-row">
                 {statsData && (
                   <>
                     <div className="pie-chart-item">
-                      <PieChart title="Input Tokens" labels={statsData.names} data={statsData.inputTokens} />
+                      <PieChart title={t('stats.inputTokens')} labels={statsData.names} data={statsData.inputTokens} />
                     </div>
                     <div className="pie-chart-item">
-                      <PieChart title="Output Tokens" labels={statsData.names} data={statsData.outputTokens} />
+                      <PieChart title={t('stats.outputTokens')} labels={statsData.names} data={statsData.outputTokens} />
                     </div>
                   </>
                 )}

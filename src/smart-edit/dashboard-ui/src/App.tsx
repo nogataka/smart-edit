@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { DashboardProvider, useDashboardState } from './context/DashboardContext';
+import { LogStreamProvider } from './context/LogStreamContext';
+import { I18nProvider } from './context/I18nProvider';
 import { MainLayout } from './components/layout/MainLayout';
 import { LogPanel } from './components/logs/LogPanel';
 import { StatsPanel } from './components/stats/StatsPanel';
@@ -59,7 +61,11 @@ function DashboardContent() {
 export function App() {
   return (
     <DashboardProvider>
-      <DashboardContent />
+      <I18nProvider>
+        <LogStreamProvider>
+          <DashboardContent />
+        </LogStreamProvider>
+      </I18nProvider>
     </DashboardProvider>
   );
 }

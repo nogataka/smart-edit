@@ -62,6 +62,7 @@ import {
 import {
   CheckOnboardingPerformedTool,
   OnboardingTool,
+  CollectProjectSymbolsTool,
   ThinkAboutCollectedInformationTool,
   ThinkAboutTaskAdherenceTool,
   ThinkAboutWhetherYouAreDoneTool,
@@ -113,6 +114,7 @@ const DEFAULT_TOOL_CLASSES: ToolClass[] = [
   InsertBeforeSymbolTool,
   CheckOnboardingPerformedTool,
   OnboardingTool,
+  CollectProjectSymbolsTool,
   ThinkAboutCollectedInformationTool,
   ThinkAboutTaskAdherenceTool,
   ThinkAboutWhetherYouAreDoneTool,

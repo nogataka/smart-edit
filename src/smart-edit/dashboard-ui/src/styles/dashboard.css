@@ -188,11 +188,13 @@ body {
 .theme-toggle {
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 6px 12px;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   cursor: pointer;
   transition:
     background-color 0.3s ease,
@@ -204,7 +206,38 @@ body {
 }
 
 .theme-toggle .icon {
-  font-size: 16px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.language-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.language-toggle:hover {
+  background-color: var(--border-color);
+}
+
+.language-toggle .icon {
+  display: flex;
+  align-items: center;
+  color: var(--text-primary);
+}
+
+.language-toggle .language-code {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .log-debug {

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { useDashboard } from '../context/DashboardContext';
+import { createContext, useContext, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { useDashboard } from './DashboardContext';
 import { fetchLogMessages, fetchToolNames } from '../utils/api';
 import type { LogMessage } from '../types';
 
@@ -22,7 +22,14 @@ function createLogMessage(message: string, idx: number): LogMessage {
   };
 }
 
-export function useLogStream() {
+interface LogStreamContextValue {
+  reloadLogs: () => Promise<void>;
+  reconnect: () => void;
+}
+
+const LogStreamContext = createContext<LogStreamContextValue | null>(null);
+
+export function LogStreamProvider({ children }: { children: ReactNode }) {
   const { state, dispatch } = useDashboard();
   const eventSourceRef = useRef<EventSource | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
@@ -198,5 +205,17 @@ export function useLogStream() {
     await loadInitialData();
   }, [dispatch, loadInitialData]);
 
-  return { reloadLogs, reconnect };
+  return (
+    <LogStreamContext.Provider value={{ reloadLogs, reconnect }}>
+      {children}
+    </LogStreamContext.Provider>
+  );
+}
+
+export function useLogStreamActions() {
+  const context = useContext(LogStreamContext);
+  if (!context) {
+    throw new Error('useLogStreamActions must be used within a LogStreamProvider');
+  }
+  return context;
 }

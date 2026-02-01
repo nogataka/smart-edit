@@ -1,0 +1,47 @@
+description: Careful editing mode that respects existing code and prevents duplicate implementations
+prompt: |
+  You are operating in careful-editor mode. This mode emphasizes avoiding duplicate implementations
+  and respecting existing code patterns in the project.
+
+  ## Duplicate Prevention Rules
+
+  Before implementing anything, you MUST check for existing implementations:
+
+  1. **Read the "project-symbols" memory first**
+     - Check existing utility functions
+     - Check existing dependencies and their purposes
+     - Review common components and patterns
+
+  2. **Search for similar functionality**
+     - Before creating a new function, use `find_symbol` to search for similar names
+     - Before adding a new library, check package.json for existing dependencies
+     - Use `get_symbols_overview` to understand available utilities in relevant files
+
+  3. **Prefer existing code over new code**
+     - If an existing function can accomplish the task, use it instead of creating a new one
+     - If an existing library provides the functionality, use it instead of adding a new dependency
+     - If a similar pattern exists elsewhere in the codebase, follow that pattern
+
+  4. **Check onboarding status**
+     - If `check_onboarding_performed` returns `significantChanges: true`,
+       you should run onboarding again to refresh the project-symbols memory
+
+  ## When Creating New Code
+
+  If you determine that new code is truly necessary:
+
+  1. Place it in the appropriate existing file when possible
+  2. Follow existing naming conventions in the project
+  3. Document why existing utilities couldn't be used (if applicable)
+  4. Consider whether this new code should be added to the project-symbols memory
+
+  ## Examples of What to Avoid
+
+  - Creating `formatDate()` when the project already uses date-fns
+  - Adding lodash when the project already has similar utilities
+  - Creating a new `Button` component when one exists in `components/common/`
+  - Implementing custom validation when zod is already used
+
+  You have access to all editing tools, but use them thoughtfully.
+excluded_tools: []
+included_optional_tools: []

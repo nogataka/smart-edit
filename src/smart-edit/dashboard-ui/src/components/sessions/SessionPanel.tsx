@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useSessionStorage } from '../../hooks/useSessionStorage';
+import { useTranslation } from '../../i18n';
 import { SessionList } from './SessionList';
 import { ExportButton } from './ExportButton';
 import { Card } from '../common/Card';
@@ -21,6 +22,7 @@ function downloadJson(data: string, filename: string) {
 
 export function SessionPanel() {
   const { sessionHistory, clearHistory, exportSession, exportAllSessions } = useSessionStorage();
+  const { t } = useTranslation();
 
   const handleExportSession = useCallback(
     (session: Session) => {
@@ -35,15 +37,18 @@ export function SessionPanel() {
     return exportAllSessions();
   }, [exportAllSessions]);
 
+  const sessionCountText =
+    sessionHistory.length === 1
+      ? t('sessions.sessionRecorded', { count: String(sessionHistory.length) })
+      : t('sessions.sessionsRecorded', { count: String(sessionHistory.length) });
+
   return (
     <div className="session-panel">
       <Card>
         <div className="session-panel-header">
           <div>
-            <h3 className="session-panel-title">Session History</h3>
-            <p className="session-panel-subtitle">
-              {sessionHistory.length} session{sessionHistory.length !== 1 ? 's' : ''} recorded
-            </p>
+            <h3 className="session-panel-title">{t('sessions.sessionHistory')}</h3>
+            <p className="session-panel-subtitle">{sessionCountText}</p>
           </div>
           <div className="session-panel-actions">
             {sessionHistory.length > 0 && (
@@ -51,10 +56,10 @@ export function SessionPanel() {
                 <ExportButton
                   getData={handleExportAll}
                   filename={`smart-edit-sessions-${new Date().toISOString().split('T')[0]}.json`}
-                  label="Export All"
+                  label={t('sessions.exportAll')}
                 />
                 <button type="button" className="btn btn-danger" onClick={clearHistory}>
-                  Clear History
+                  {t('sessions.clearHistory')}
                 </button>
               </>
             )}

@@ -38,21 +38,21 @@ Smart Edit は、AI エージェントがプロジェクトに関する情報を
 
 ### 主な特徴
 
-| 特徴 | 説明 |
-|------|------|
-| **永続化** | セッション間で完全に永続化され、IDE 再起動や PC 再起動後も保持されます |
+| 特徴                 | 説明                                                                     |
+| -------------------- | ------------------------------------------------------------------------ |
+| **永続化**           | セッション間で完全に永続化され、IDE 再起動や PC 再起動後も保持されます   |
 | **プロジェクト独立** | メモリはプロジェクトごとに独立しており、他プロジェクトとは共有されません |
-| **Markdown 形式** | 人間が読みやすい Markdown ファイルとして保存されます |
-| **名前付き管理** | 「kickoff」「retro」「architecture」など、用途に応じた名前でメモリを管理 |
+| **Markdown 形式**    | 人間が読みやすい Markdown ファイルとして保存されます                     |
+| **名前付き管理**     | 「kickoff」「retro」「architecture」など、用途に応じた名前でメモリを管理 |
 
 ### 利用可能なツール
 
-| ツール | 説明 |
-|--------|------|
-| `WriteMemory` | 名前付きメモリを保存 |
-| `ReadMemory` | メモリの内容を読み込み |
+| ツール         | 説明                       |
+| -------------- | -------------------------- |
+| `WriteMemory`  | 名前付きメモリを保存       |
+| `ReadMemory`   | メモリの内容を読み込み     |
 | `ListMemories` | 保存済みメモリの一覧を取得 |
-| `DeleteMemory` | メモリを削除 |
+| `DeleteMemory` | メモリを削除               |
 
 保存場所: `{プロジェクトルート}/.smart-edit/memories/`
 
@@ -62,11 +62,11 @@ Smart Edit は、AI の振る舞いをカスタマイズするための柔軟な
 
 ### 構成要素
 
-| 要素 | 説明 | 保存場所 |
-|------|------|----------|
-| **コンテキスト** | 接続先クライアント（Claude Code, Codex, Desktop など）に応じた設定 | `~/.smart-edit/contexts/` |
-| **モード** | AI の動作モード（editor, reviewer, architect など）を定義 | `~/.smart-edit/modes/` |
-| **プロンプトテンプレート** | 各ツールの出力形式やインストラクションを定義 | `~/.smart-edit/prompt_templates/` |
+| 要素                       | 説明                                                               | 保存場所                          |
+| -------------------------- | ------------------------------------------------------------------ | --------------------------------- |
+| **コンテキスト**           | 接続先クライアント（Claude Code, Codex, Desktop など）に応じた設定 | `~/.smart-edit/contexts/`         |
+| **モード**                 | AI の動作モード（editor, reviewer, architect など）を定義          | `~/.smart-edit/modes/`            |
+| **プロンプトテンプレート** | 各ツールの出力形式やインストラクションを定義                       | `~/.smart-edit/prompt_templates/` |
 
 ### カスタマイズの流れ
 
@@ -87,12 +87,12 @@ Smart Edit は、AI の振る舞いをカスタマイズするための柔軟な
 
 ### 機能一覧
 
-| タブ | 機能 |
-|------|------|
-| **Dashboard** | プロジェクト概要、リアルタイムメトリクス、最近のアクティビティ |
-| **Logs** | ログ検索・フィルタ（レベル別、ツール名別）、リアルタイムストリーミング |
-| **Statistics** | API 呼び出し統計、トークン使用量チャート、ライブカウンター |
-| **Sessions** | セッション履歴、JSON エクスポート、過去セッション比較 |
+| タブ           | 機能                                                                   |
+| -------------- | ---------------------------------------------------------------------- |
+| **Dashboard**  | プロジェクト概要、リアルタイムメトリクス、最近のアクティビティ         |
+| **Logs**       | ログ検索・フィルタ（レベル別、ツール名別）、リアルタイムストリーミング |
+| **Statistics** | API 呼び出し統計、トークン使用量チャート、ライブカウンター             |
+| **Sessions**   | セッション履歴、JSON エクスポート、過去セッション比較                  |
 
 - `--enable-web-dashboard` オプションで有効化
 - ダークモード / ライトモード切替対応
@@ -102,10 +102,10 @@ Smart Edit は、AI の振る舞いをカスタマイズするための柔軟な
 
 AI エージェントの作業効率を高めるためのワークフロー支援ツールを提供します。
 
-| ツール | 説明 |
-|--------|------|
-| `Onboarding` | プロジェクト初回参加時のオンボーディングプロセスを支援 |
-| `CheckOnboardingPerformed` | オンボーディングが完了しているか確認 |
+| ツール                     | 説明                                                   |
+| -------------------------- | ------------------------------------------------------ |
+| `Onboarding`               | プロジェクト初回参加時のオンボーディングプロセスを支援 |
+| `CheckOnboardingPerformed` | オンボーディングが完了しているか確認                   |
 
 オンボーディングでは、プロジェクトの構造理解、コーディング規約の確認、既存メモリの参照などを AI エージェントに案内します。
 
@@ -325,39 +325,85 @@ Smart Edit はプロジェクト固有のメモリ機能を提供します。AI 
 
 言語サーバーは以下の方式で管理されます：
 
-| 方式 | 説明 | 対象サーバー |
-|------|------|-------------|
-| **バイナリDL型** | プラットフォーム別バイナリを自動ダウンロード | Clangd, Dart SDK, Lua, Zig, Terraform |
-| **npm型** | npm でパッケージをインストール | TypeScript, Bash, PHP, Vue |
-| **システム依存型** | システムにインストール済みのコマンドを使用 | Pyright, Jedi, gopls, SourceKit, Erlang, Nix |
-| **システム依存型(半自動)** | 未検出時に自動インストール | rust-analyzer (rustup経由) |
-| **言語パッケージ型** | 各言語のパッケージマネージャーでインストール | Ruby LSP, Solargraph (gem), R (CRAN) |
-| **複合ダウンロード型** | 複数コンポーネントをダウンロード・展開 | Eclipse JDT (Java), Kotlin |
+| 方式                       | 説明                                         | 対象サーバー                                 |
+| -------------------------- | -------------------------------------------- | -------------------------------------------- |
+| **バイナリDL型**           | プラットフォーム別バイナリを自動ダウンロード | Clangd, Dart SDK, Lua, Zig, Terraform        |
+| **npm型**                  | npm でパッケージをインストール               | TypeScript, Bash, PHP, Vue                   |
+| **システム依存型**         | システムにインストール済みのコマンドを使用   | Pyright, Jedi, gopls, SourceKit, Erlang, Nix |
+| **システム依存型(半自動)** | 未検出時に自動インストール                   | rust-analyzer (rustup経由)                   |
+| **言語パッケージ型**       | 各言語のパッケージマネージャーでインストール | Ruby LSP, Solargraph (gem), R (CRAN)         |
+| **複合ダウンロード型**     | 複数コンポーネントをダウンロード・展開       | Eclipse JDT (Java), Kotlin                   |
 
 詳細は [LSPサーバー実行方式調査](docs/public/lsp_server_execution_methods.md) および [LSPサーバー実行方式一覧表](docs/public/lsp_servers_execution_type_table.md) を参照してください。
 
+## MCP クライアント接続ガイド
+
+Smart Edit は MCP (Model Context Protocol) サーバーとして動作し、様々な AI コーディングツールから利用できます。
+
+### `--project` オプションについて
+
+**`--project` は省略可能です。** MCP サーバー起動時にプロジェクトを指定しなくても、以下の方法でプロジェクトをアクティブ化できます：
+
+1. **チャットから指示**: 「現在のディレクトリをプロジェクトとしてアクティブ化して」と依頼
+2. **`activate_project` ツール**: MCP 経由で `activate_project` ツールを呼び出し
+
+```bash
+# --project なし（推奨: 柔軟に複数プロジェクトを切り替え可能）
+npx @nogataka/smart-edit smart-edit start-mcp-server --transport stdio
+
+# --project あり（特定プロジェクトに固定する場合）
+npx @nogataka/smart-edit smart-edit start-mcp-server --project /path/to/project --transport stdio
+```
+
+以下の各クライアント設定例では `--project` を省略していますが、必要に応じて追加できます。
+
+---
+
+### 対応 MCP クライアント一覧
+
+| クライアント       | 開発元           | 対応状況   | 備考                                 |
+| ------------------ | ---------------- | ---------- | ------------------------------------ |
+| **Claude Code**    | Anthropic        | ✅ 完全対応 | CLI ベースのコーディングアシスタント |
+| **Claude Desktop** | Anthropic        | ✅ 完全対応 | デスクトップアプリ版 Claude          |
+| **Codex CLI**      | OpenAI           | ✅ 完全対応 | OpenAI の CLI コーディングツール     |
+| **Cursor**         | Cursor Inc       | ✅ 対応     | AI ファースト IDE                    |
+| **Windsurf**       | Codeium          | ✅ 対応     | AI コードエディタ                    |
+| **Continue**       | Continue         | ✅ 対応     | オープンソース AI アシスタント       |
+| **Cline**          | Cline            | ✅ 対応     | VS Code 拡張 (旧 Claude Dev)         |
+| **Zed**            | Zed              | ✅ 対応     | 高速 AI コードエディタ               |
+| **GitHub Copilot** | GitHub/Microsoft | ✅ 対応     | VS Code 1.102+, JetBrains で公式対応 |
+
+---
+
 ### Claude Code への接続手順
 
-Claude Code ではプロジェクトごとに MCP サーバーを追加します。smart-edit を使う場合の手順は以下の通りです。
+Claude Code ではプロジェクトごとに MCP サーバーを追加します。
 
-1. プロジェクトのルートディレクトリで次のコマンドを実行します。
-   ```bash
-   claude mcp add smart-edit -- npx -y @nogataka/smart-edit@latest smart-edit start-mcp-server --context ide-assistant --project "$(pwd)" --transport stdio
-   ```
-   - `smart-edit` が Claude Code 上でのサーバー識別子になります（任意で変更可）。
-   - `--context ide-assistant` は Claude Code 向けに最適化した設定です。用途に応じて `desktop-app` など他のコンテキストへ切り替えても構いません。
-   - `--project` にはコードベースのルートパスを指定してください。`$(pwd)` を使うとカレントディレクトリをそのまま渡せます。
-   - `--transport stdio` は標準入出力経由での通信を指定します。Claude Code は stdio を用いるため、この指定が必要です。
+```bash
+# プロジェクトのルートディレクトリで実行
+claude mcp add smart-edit -- npx -y @nogataka/smart-edit@latest smart-edit start-mcp-server --transport stdio
+```
 
-2. 追加が完了したら、`claude mcp list` で登録済みサーバーを確認できます。必要に応じて `claude mcp remove smart-edit` で削除し、再登録してください。
+**オプション付きの例:**
+```bash
+# プロジェクトを指定する場合
+claude mcp add smart-edit -- npx -y @nogataka/smart-edit@latest smart-edit start-mcp-server --project "$(pwd)" --transport stdio
 
-3. 会話を開始すると Claude が smart-edit の初期インストラクション（`initial_instructions`）を自動で読み込みます。もし読み込みに失敗した場合は、Claude に「smart-edit の初期インストラクションを読んで」と依頼するか、`/mcp__smart-edit__initial_instructions` を実行してください（初期インストラクションツールを有効化している場合）。
+# コンテキストを指定する場合
+claude mcp add smart-edit -- npx -y @nogataka/smart-edit@latest smart-edit start-mcp-server --context ide-assistant --transport stdio
+```
 
-4. コンテキストやモードをカスタマイズしたい場合は、`~/.smart-edit/context/` 配下に YAML を配置した上で `--context` / `--mode` オプションで指定できます。
+**管理コマンド:**
+```bash
+claude mcp list              # 登録済みサーバー一覧
+claude mcp remove smart-edit # サーバー削除
+```
+
+---
 
 ### Codex CLI への接続手順
 
-Codex CLI はグローバル設定で MCP サーバーを追加します。`~/.codex/config.toml` に以下のエントリを追加してください。
+`~/.codex/config.toml` に以下を追加します。
 
 ```toml
 [mcp_servers.smart-edit]
@@ -365,12 +411,148 @@ command = "npx"
 args = ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--context", "codex", "--transport", "stdio"]
 ```
 
-- `--context codex` は Codex 特有の I/O や制約に対応するための設定です。Codex では `codex` コンテキストを使うことでツールの動作が最適化されます。
-- Codex 起動後、チャット内で「smart-edit で現在のディレクトリをプロジェクトとしてアクティブ化して」と依頼してください。プロジェクトをアクティブ化しないとツールを利用できません。
-- ダッシュボード (`--enable-web-dashboard`) を利用する場合、Codex のサンドボックスではブラウザが自動起動しないことがあります。その場合は `http://localhost:24282/dashboard/index.html` （ポートは環境により変わります）へブラウザでアクセスしてください。
-- Codex の UI ではツール実行が `failed` と表示されることがありますが、実際には処理が成功しているケースが多いです。ログ (`~/.codex/log/codex-tui.log`) を併せて確認してください。
+**使用方法:**
+1. Codex 起動後、チャット内で「smart-edit で現在のディレクトリをプロジェクトとしてアクティブ化して」と依頼
+2. プロジェクトをアクティブ化するとツールが利用可能に
 
-これらの設定を行うことで、Claude Code / Codex ともに `npx -y @nogataka/smart-edit@latest` を通して smart-edit MCP サーバーを利用できます。`npm publish` 後に `@nogataka/smart-edit` のバージョンを最新に保つようご注意ください。
+> **Note**:
+> - `--project` を追加すれば起動時にプロジェクトを指定できます（上記「`--project` オプションについて」を参照）
+> - Codex の UI でツール実行が `failed` と表示されても、実際には成功していることがあります。ログ (`~/.codex/log/codex-tui.log`) で確認してください。
+
+---
+
+### Cursor への接続手順
+
+Cursor では `~/.cursor/mcp.json` (または Settings → MCP) で設定します。
+
+```json
+{
+  "mcpServers": {
+    "smart-edit": {
+      "command": "npx",
+      "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+    }
+  }
+}
+```
+
+> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+
+---
+
+### Windsurf (Codeium) への接続手順
+
+Windsurf では `~/.codeium/windsurf/mcp_config.json` で設定します。
+
+```json
+{
+  "mcpServers": {
+    "smart-edit": {
+      "command": "npx",
+      "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+    }
+  }
+}
+```
+
+> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+
+---
+
+### Continue への接続手順
+
+Continue では `~/.continue/config.json` の `experimental.modelContextProtocolServers` に追加します。
+
+```json
+{
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "stdio",
+          "command": "npx",
+          "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+        }
+      }
+    ]
+  }
+}
+```
+
+> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+
+---
+
+### Cline (VS Code 拡張) への接続手順
+
+Cline では VS Code の設定 (`settings.json`) または Cline の MCP 設定画面から追加します。
+
+```json
+{
+  "cline.mcpServers": {
+    "smart-edit": {
+      "command": "npx",
+      "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+    }
+  }
+}
+```
+
+> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+
+---
+
+### Zed への接続手順
+
+Zed では `~/.config/zed/settings.json` の `context_servers` に追加します。
+
+```json
+{
+  "context_servers": {
+    "smart-edit": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+      }
+    }
+  }
+}
+```
+
+> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+
+---
+
+### GitHub Copilot への接続手順
+
+GitHub Copilot は VS Code 1.102 以降で MCP を公式サポートしています。
+
+#### VS Code での設定
+
+`.vscode/mcp.json` または `settings.json` の `mcp.servers` に追加します。
+
+```json
+{
+  "servers": {
+    "smart-edit": {
+      "command": "npx",
+      "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+    }
+  }
+}
+```
+
+> `--project` を追加する場合: `args` に `"--project", "/path/to/project"` を追加
+
+#### JetBrains IDE での設定
+
+JetBrains IDE（IntelliJ IDEA, WebStorm 等）でも MCP がサポートされています。設定は IDE の MCP 設定画面から追加できます。
+
+**参考リンク:**
+- [VS Code MCP Servers ドキュメント](https://code.visualstudio.com/docs/copilot/customization/mcp-servers)
+- [GitHub Copilot MCP 概要](https://docs.github.com/en/copilot/concepts/context/mcp)
+
+---
 
 ### Claude Desktop への接続手順
 
@@ -400,7 +582,7 @@ Claude Desktop (Windows/macOS) では `claude_desktop_config.json` に MCP サ�
   }
   ```
   - `dist/cli.js` を呼び出す前に `pnpm build` を実行し、`dist/` に成果物を生成しておいてください。
-  - `--project` は必要に応じて省略できます（省略時は起動後にチャットからプロジェクトをアクティブ化します）。
+  - `--project` は省略可能です（上記「`--project` オプションについて」を参照）。
 
 - **Docker イメージを使う場合（PoC）**
   ```json

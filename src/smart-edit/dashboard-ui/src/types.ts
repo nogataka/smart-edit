@@ -16,6 +16,8 @@ export type ConnectionMode = 'streaming' | 'polling' | 'disconnected';
 
 export type Theme = 'light' | 'dark';
 
+export type Locale = 'en' | 'ja';
+
 export type NavigationView = 'dashboard' | 'logs' | 'stats' | 'sessions';
 
 export type LogLevel = 'debug' | 'info' | 'warning' | 'error' | 'default';
@@ -45,6 +47,7 @@ export interface DashboardState {
   toolNames: string[];
   toolStats: ToolStatsResponse | null;
   theme: Theme;
+  locale: Locale;
   isStatsVisible: boolean;
   connectionMode: ConnectionMode;
   activeProject: string | null;
@@ -66,6 +69,7 @@ export type DashboardAction =
   | { type: 'SET_TOOL_NAMES'; toolNames: string[] }
   | { type: 'SET_TOOL_STATS'; stats: ToolStatsResponse | null }
   | { type: 'SET_THEME'; theme: Theme }
+  | { type: 'SET_LOCALE'; locale: Locale }
   | { type: 'TOGGLE_STATS' }
   | { type: 'SET_CONNECTION_MODE'; mode: ConnectionMode }
   | { type: 'SET_ACTIVE_PROJECT'; project: string | null }

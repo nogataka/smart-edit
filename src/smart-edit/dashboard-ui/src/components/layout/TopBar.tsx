@@ -1,25 +1,28 @@
 import { useDashboardState } from '../../context/DashboardContext';
+import { useTranslation } from '../../i18n';
 import { ThemeToggle } from '../ThemeToggle';
+import { LanguageToggle } from '../LanguageToggle';
 import type { NavigationView } from '../../types';
 
-const VIEW_TITLES: Record<NavigationView, string> = {
-  dashboard: 'Dashboard',
-  logs: 'Logs',
-  stats: 'Statistics',
-  sessions: 'Sessions'
+const VIEW_TITLE_KEYS: Record<NavigationView, string> = {
+  dashboard: 'nav.dashboard',
+  logs: 'nav.logs',
+  stats: 'nav.statistics',
+  sessions: 'nav.sessions'
 };
 
 export function TopBar() {
   const { currentView, activeProject, connectionMode } = useDashboardState();
+  const { t } = useTranslation();
 
   const getConnectionLabel = () => {
     switch (connectionMode) {
       case 'streaming':
-        return 'Connected';
+        return t('status.connected');
       case 'polling':
-        return 'Polling';
+        return t('status.polling');
       case 'disconnected':
-        return 'Disconnected';
+        return t('status.disconnected');
     }
   };
 
@@ -27,7 +30,7 @@ export function TopBar() {
     <header className="topbar">
       <div className="topbar-left">
         <div>
-          <h1 className="topbar-title">{VIEW_TITLES[currentView]}</h1>
+          <h1 className="topbar-title">{t(VIEW_TITLE_KEYS[currentView])}</h1>
           {activeProject && (
             <p className="topbar-subtitle">{activeProject}</p>
           )}
@@ -39,6 +42,7 @@ export function TopBar() {
           <span className={`connection-dot ${connectionMode}`} />
           <span>{getConnectionLabel()}</span>
         </div>
+        <LanguageToggle />
         <ThemeToggle />
       </div>
     </header>

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useDashboardState, useDashboardDispatch } from '../../context/DashboardContext';
+import { useTranslation } from '../../i18n';
 import { useToolStats } from '../../hooks/useToolStats';
 import { useRealTimeStats, formatNumber } from '../../hooks/useRealTimeStats';
 import { MetricCard } from '../stats/MetricCard';
@@ -83,7 +84,8 @@ function QuickNavCard({ title, description, icon, view }: QuickNavCardProps) {
 }
 
 export function DashboardOverview() {
-  const { logs, toolStats, connectionMode, activeProject } = useDashboardState();
+  const { logs, toolStats, activeProject } = useDashboardState();
+  const { t } = useTranslation();
   const { loadStats } = useToolStats();
   const realTimeStats = useRealTimeStats(toolStats);
 
@@ -99,66 +101,65 @@ export function DashboardOverview() {
         <div className="welcome-section">
           <div className="welcome-content">
             <h2 className="welcome-title">
-              {activeProject ? `Welcome to ${activeProject}` : 'Welcome to Smart Edit'}
+              {activeProject
+                ? t('dashboard.welcomeWithProject', { project: activeProject })
+                : t('dashboard.welcome')}
             </h2>
             <p className="welcome-description">
-              Monitor your coding sessions, view logs, and analyze tool usage statistics.
+              {t('dashboard.description')}
             </p>
-          </div>
-          <div className="connection-badge">
-            <span className={`connection-status ${connectionMode}`}>
-              {connectionMode === 'streaming' && 'Connected'}
-              {connectionMode === 'polling' && 'Polling'}
-              {connectionMode === 'disconnected' && 'Disconnected'}
-            </span>
           </div>
         </div>
       </Card>
 
       <div className="metrics-grid">
         <MetricCard
-          title="Log Entries"
+          title={t('dashboard.logEntries')}
           value={<LiveCounter value={logs.length} />}
-          subtitle="Current session"
+          subtitle={t('dashboard.currentSession')}
           icon={<LogIcon />}
         />
         <MetricCard
-          title="Tool Calls"
+          title={t('dashboard.toolCalls')}
           value={<LiveCounter value={realTimeStats.totalCalls} />}
-          subtitle={`${realTimeStats.toolCount} tools used`}
+          subtitle={t('dashboard.toolsUsed', { count: realTimeStats.toolCount })}
           icon={<ActivityIcon />}
         />
         <MetricCard
-          title="Total Tokens"
+          title={t('dashboard.totalTokens')}
           value={<LiveCounter value={realTimeStats.totalTokens} formatter={formatNumber} />}
-          subtitle="Input + Output"
+          subtitle={t('dashboard.inputOutput')}
           icon={<TokenIcon />}
         />
         <MetricCard
-          title="Top Tool"
+          title={t('dashboard.topTool')}
           value={realTimeStats.mostUsedTool?.name || '-'}
-          subtitle={realTimeStats.mostUsedTool ? `${realTimeStats.mostUsedTool.calls} calls` : 'No data'}
+          subtitle={
+            realTimeStats.mostUsedTool
+              ? t('dashboard.calls', { count: realTimeStats.mostUsedTool.calls })
+              : t('dashboard.noData')
+          }
           icon={<ToolIcon />}
         />
       </div>
 
-      <Card title="Quick Navigation">
+      <Card title={t('dashboard.quickNavigation')}>
         <div className="quick-nav-grid">
           <QuickNavCard
-            title="View Logs"
-            description="Real-time log stream with filtering"
+            title={t('dashboard.viewLogs')}
+            description={t('dashboard.viewLogsDesc')}
             icon={<LogIcon />}
             view="logs"
           />
           <QuickNavCard
-            title="Statistics"
-            description="Tool usage and token analytics"
+            title={t('nav.statistics')}
+            description={t('dashboard.statisticsDesc')}
             icon={<ActivityIcon />}
             view="stats"
           />
           <QuickNavCard
-            title="Sessions"
-            description="Session history and export"
+            title={t('nav.sessions')}
+            description={t('dashboard.sessionsDesc')}
             icon={<TokenIcon />}
             view="sessions"
           />

@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n';
 import type { Session } from '../../types';
 import { formatNumber } from '../../hooks/useRealTimeStats';
 
@@ -6,23 +7,23 @@ interface SessionListProps {
   onExport: (session: Session) => void;
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString(undefined, {
+function formatDate(date: Date, locale: string): string {
+  return date.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
   });
 }
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString(undefined, {
+function formatTime(date: Date, locale: string): string {
+  return date.toLocaleTimeString(locale === 'ja' ? 'ja-JP' : 'en-US', {
     hour: '2-digit',
     minute: '2-digit'
   });
 }
 
-function formatDuration(start: Date, end: Date | null): string {
-  if (!end) return 'In progress';
+function formatDuration(start: Date, end: Date | null, inProgressText: string): string {
+  if (!end) return inProgressText;
 
   const diff = end.getTime() - start.getTime();
   const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -35,13 +36,13 @@ function formatDuration(start: Date, end: Date | null): string {
 }
 
 export function SessionList({ sessions, onExport }: SessionListProps) {
+  const { t, locale } = useTranslation();
+
   if (sessions.length === 0) {
     return (
       <div className="session-list-empty">
-        <p>No session history available.</p>
-        <p className="session-list-empty-hint">
-          Session history will appear here as you use Smart Edit.
-        </p>
+        <p>{t('sessions.noHistory')}</p>
+        <p className="session-list-empty-hint">{t('sessions.noHistoryHint')}</p>
       </div>
     );
   }
@@ -52,14 +53,14 @@ export function SessionList({ sessions, onExport }: SessionListProps) {
         <div key={session.id} className="session-item">
           <div className="session-item-header">
             <div className="session-item-info">
-              <span className="session-item-date">{formatDate(session.startTime)}</span>
+              <span className="session-item-date">{formatDate(session.startTime, locale)}</span>
               <span className="session-item-time">
-                {formatTime(session.startTime)}
-                {session.endTime && ` - ${formatTime(session.endTime)}`}
+                {formatTime(session.startTime, locale)}
+                {session.endTime && ` - ${formatTime(session.endTime, locale)}`}
               </span>
             </div>
             <span className="session-item-duration">
-              {formatDuration(session.startTime, session.endTime)}
+              {formatDuration(session.startTime, session.endTime, t('sessions.inProgress'))}
             </span>
           </div>
 
@@ -69,15 +70,15 @@ export function SessionList({ sessions, onExport }: SessionListProps) {
 
           <div className="session-item-stats">
             <div className="session-stat">
-              <span className="session-stat-label">Calls</span>
+              <span className="session-stat-label">{t('sessions.calls')}</span>
               <span className="session-stat-value">{session.stats.totalCalls}</span>
             </div>
             <div className="session-stat">
-              <span className="session-stat-label">Input</span>
+              <span className="session-stat-label">{t('sessions.input')}</span>
               <span className="session-stat-value">{formatNumber(session.stats.totalInputTokens)}</span>
             </div>
             <div className="session-stat">
-              <span className="session-stat-label">Output</span>
+              <span className="session-stat-label">{t('sessions.output')}</span>
               <span className="session-stat-value">{formatNumber(session.stats.totalOutputTokens)}</span>
             </div>
           </div>
@@ -87,7 +88,7 @@ export function SessionList({ sessions, onExport }: SessionListProps) {
               type="button"
               className="session-action-btn"
               onClick={() => onExport(session)}
-              title="Export session as JSON"
+              title={t('sessions.exportSession')}
             >
               <svg
                 width="16"
@@ -101,7 +102,7 @@ export function SessionList({ sessions, onExport }: SessionListProps) {
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Export
+              {t('sessions.export')}
             </button>
           </div>
         </div>

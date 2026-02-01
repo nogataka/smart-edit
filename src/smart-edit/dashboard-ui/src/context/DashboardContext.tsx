@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, type ReactNode } from 'react';
-import type { DashboardState, DashboardAction, Theme, LogFilter } from '../types';
+import type { DashboardState, DashboardAction, Theme, Locale, LogFilter } from '../types';
 
 const MAX_LOG_ENTRIES = 1000;
 
@@ -13,6 +13,14 @@ function getStoredTheme(): Theme {
 function getStoredSidebarState(): boolean {
   if (typeof window === 'undefined') return false;
   return localStorage.getItem('smart-edit-sidebar-collapsed') === 'true';
+}
+
+function getStoredLocale(): Locale {
+  if (typeof window === 'undefined') return 'en';
+  const stored = localStorage.getItem('smart-edit-locale');
+  if (stored === 'ja' || stored === 'en') return stored;
+  const browserLang = navigator.language.toLowerCase();
+  return browserLang.startsWith('ja') ? 'ja' : 'en';
 }
 
 function createDefaultLogFilter(): LogFilter {
@@ -29,13 +37,14 @@ const initialState: DashboardState = {
   toolNames: [],
   toolStats: null,
   theme: getStoredTheme(),
+  locale: getStoredLocale(),
   isStatsVisible: false,
   connectionMode: 'disconnected',
   activeProject: null,
   error: null,
   isLoading: false,
   // Navigation
-  currentView: 'logs',
+  currentView: 'dashboard',
   sidebarCollapsed: getStoredSidebarState(),
   // Log filtering
   logFilter: createDefaultLogFilter(),
@@ -68,6 +77,9 @@ function dashboardReducer(state: DashboardState, action: DashboardAction): Dashb
       localStorage.setItem('smart-edit-theme', action.theme);
       document.documentElement.setAttribute('data-theme', action.theme);
       return { ...state, theme: action.theme };
+    case 'SET_LOCALE':
+      localStorage.setItem('smart-edit-locale', action.locale);
+      return { ...state, locale: action.locale };
     case 'TOGGLE_STATS':
       return { ...state, isStatsVisible: !state.isStatsVisible };
     case 'SET_CONNECTION_MODE':

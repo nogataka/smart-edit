@@ -8,7 +8,18 @@ import {
   type SmartEditAgentLike,
   type ToolClass
 } from './tools_base.js';
-import { ListMemoriesTool } from './memory_tools.js';
+import { ListMemoriesTool, ReadMemoryTool, WriteMemoryTool } from './memory_tools.js';
+import { getCurrentCommit, hasSignificantChanges } from '../util/git.js';
+
+const PROJECT_SYMBOLS_MEMORY = 'project-symbols';
+
+interface ProjectSymbolsMemory {
+  lastCommit: string;
+  lastUpdated: string;
+  dependencies?: Record<string, string>;
+  utilityDirs?: string[];
+  commonComponents?: string[];
+}
 
 function ensureString(value: unknown): string {
   if (typeof value === 'string') {
@@ -99,7 +110,8 @@ async function callAgentSystemPrompt(agent: SmartEditAgentLike): Promise<string>
 }
 
 export class CheckOnboardingPerformedTool extends Tool {
-  static override readonly description = 'Checks whether project onboarding was already performed.';
+  static override readonly description =
+    'Checks whether project onboarding was already performed and if there are significant changes since last onboarding.';
 
   override async apply(_args: Record<string, unknown> = {}): Promise<string> {
     const listTool = getToolInstance(this.agent, ListMemoriesTool);
@@ -124,13 +136,54 @@ export class CheckOnboardingPerformedTool extends Tool {
       );
     }
 
+    // Check for significant changes since last onboarding
+    let significantChangesInfo = '';
+
+    if (parsed.includes(PROJECT_SYMBOLS_MEMORY)) {
+      try {
+        const readTool = getToolInstance(this.agent, ReadMemoryTool);
+        const memoryContent = await Promise.resolve(
+          readTool.apply({ memory_file_name: PROJECT_SYMBOLS_MEMORY })
+        );
+
+        const projectSymbols = JSON.parse(ensureString(memoryContent)) as ProjectSymbolsMemory;
+        const lastCommit = projectSymbols.lastCommit;
+
+        if (lastCommit) {
+          const currentCommit = await getCurrentCommit();
+
+          if (currentCommit && currentCommit !== lastCommit) {
+            const changeInfo = await hasSignificantChanges(lastCommit);
+
+            if (changeInfo.significant) {
+              significantChangesInfo = [
+                '',
+                '## IMPORTANT: Significant Changes Detected',
+                '',
+                `Since your last onboarding (commit: ${lastCommit.substring(0, 7)}), there have been significant changes:`,
+                changeInfo.summary,
+                '',
+                'Consider re-running onboarding to refresh the project-symbols memory.',
+                'Use the `onboarding` tool to update your knowledge of the codebase.',
+                ''
+              ].join('\n');
+            }
+          }
+        }
+      } catch (error) {
+        // If we can't read the memory or parse it, just continue without the check
+        const message = error instanceof Error ? error.message : String(error);
+        significantChangesInfo = `\n(Note: Could not check for changes: ${message})\n`;
+      }
+    }
+
     const lines = [
       'The onboarding was already performed, below is the list of available memories.',
       'Do not read them immediately, just remember that they exist and that you can read them later, if it is necessary',
       'for the current task.',
       'Some memories may be based on previous conversations, others may be general for the current project.',
       'You should be able to tell which one you need based on the name of the memory.',
-      '',
+      significantChangesInfo,
       JSON.stringify(parsed)
     ];
     return lines.join('\n');
@@ -149,6 +202,62 @@ export class OnboardingTool extends Tool {
       { system }
     );
     return result;
+  }
+}
+
+export class CollectProjectSymbolsTool extends Tool {
+  static override readonly description =
+    'Collects and saves project symbols (utilities, components, dependencies) to the project-symbols memory. ' +
+    'Call this after onboarding to enable duplicate detection features.';
+
+  override async apply(args: Record<string, unknown> = {}): Promise<string> {
+    const {
+      utility_dirs = [],
+      common_components = [],
+      dependencies = {}
+    } = args as {
+      utility_dirs?: string[];
+      common_components?: string[];
+      dependencies?: Record<string, string>;
+    };
+
+    // Get current git commit
+    const currentCommit = await getCurrentCommit();
+
+    // Build the project symbols memory content
+    const projectSymbols: ProjectSymbolsMemory = {
+      lastCommit: currentCommit ?? 'unknown',
+      lastUpdated: new Date().toISOString(),
+      dependencies,
+      utilityDirs: utility_dirs,
+      commonComponents: common_components
+    };
+
+    // Save to memory
+    const writeTool = getToolInstance(this.agent, WriteMemoryTool);
+    const memoryContent = JSON.stringify(projectSymbols, null, 2);
+
+    await Promise.resolve(
+      writeTool.apply({
+        memory_name: PROJECT_SYMBOLS_MEMORY,
+        content: memoryContent
+      })
+    );
+
+    const lines = [
+      `Project symbols saved to memory: ${PROJECT_SYMBOLS_MEMORY}`,
+      '',
+      `- Commit: ${projectSymbols.lastCommit}`,
+      `- Updated: ${projectSymbols.lastUpdated}`,
+      `- Utility directories: ${utility_dirs.length > 0 ? utility_dirs.join(', ') : 'none specified'}`,
+      `- Common components: ${common_components.length > 0 ? common_components.join(', ') : 'none specified'}`,
+      `- Dependencies tracked: ${Object.keys(dependencies).length}`,
+      '',
+      'This information will be used for duplicate detection in careful-editor mode.',
+      'The system will alert you when significant changes occur since this onboarding.'
+    ];
+
+    return lines.join('\n');
   }
 }
 

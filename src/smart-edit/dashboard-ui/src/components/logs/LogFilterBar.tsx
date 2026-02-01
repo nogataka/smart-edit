@@ -1,24 +1,26 @@
 import { useState } from 'react';
 import { useDashboardState, useDashboardDispatch } from '../../context/DashboardContext';
-import { useLogStream } from '../../hooks/useLogStream';
+import { useLogStreamActions } from '../../context/LogStreamContext';
+import { useTranslation } from '../../i18n';
 import { SearchInput } from '../common/SearchInput';
 import { Dropdown } from '../common/Dropdown';
 import { useAvailableToolNames } from '../../hooks/useLogFilter';
 import type { LogLevel } from '../../types';
 
-const LOG_LEVEL_OPTIONS: { value: LogLevel; label: string }[] = [
-  { value: 'debug', label: 'Debug' },
-  { value: 'info', label: 'Info' },
-  { value: 'warning', label: 'Warning' },
-  { value: 'error', label: 'Error' }
-];
-
 export function LogFilterBar() {
   const { logs, logFilter } = useDashboardState();
   const dispatch = useDashboardDispatch();
+  const { t } = useTranslation();
   const availableToolNames = useAvailableToolNames(logs);
-  const { reloadLogs } = useLogStream();
+  const { reloadLogs } = useLogStreamActions();
   const [isReloading, setIsReloading] = useState(false);
+
+  const logLevelOptions: { value: LogLevel; label: string }[] = [
+    { value: 'debug', label: t('logs.debug') },
+    { value: 'info', label: t('logs.info') },
+    { value: 'warning', label: t('logs.warning') },
+    { value: 'error', label: t('logs.error') }
+  ];
 
   const toolNameOptions = availableToolNames.map((name) => ({
     value: name,
@@ -63,16 +65,16 @@ export function LogFilterBar() {
       <SearchInput
         value={logFilter.searchKeyword}
         onChange={handleSearchChange}
-        placeholder="Search logs..."
+        placeholder={t('logs.searchPlaceholder')}
         className="log-filter-search"
       />
 
       <div className="log-filter-dropdowns">
         <Dropdown
-          options={LOG_LEVEL_OPTIONS}
+          options={logLevelOptions}
           selected={logFilter.logLevels}
           onChange={handleLogLevelChange}
-          placeholder="Log Level"
+          placeholder={t('logs.logLevel')}
           className="log-filter-level"
         />
 
@@ -81,7 +83,7 @@ export function LogFilterBar() {
             options={toolNameOptions}
             selected={logFilter.toolNames}
             onChange={handleToolNameChange}
-            placeholder="Tool"
+            placeholder={t('logs.tool')}
             className="log-filter-tool"
           />
         )}
@@ -91,7 +93,7 @@ export function LogFilterBar() {
           className={`icon-btn reload-btn ${isReloading ? 'spinning' : ''}`}
           onClick={handleReload}
           disabled={isReloading}
-          title="Reload logs"
+          title={t('logs.reloadLogs')}
         >
           <svg
             width="18"
@@ -111,7 +113,7 @@ export function LogFilterBar() {
 
       {hasActiveFilters && (
         <button type="button" className="log-filter-clear btn" onClick={handleClearFilters}>
-          Clear Filters
+          {t('logs.clearFilters')}
         </button>
       )}
     </div>
