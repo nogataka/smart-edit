@@ -141,7 +141,7 @@ AI エージェントが既存のコードや依存ライブラリと重複す�
 ### careful-editor モードの使用
 
 ```bash
-npx @nogataka/smart-edit smart-edit start-mcp-server \
+npx @nogataka/smart-edit start-mcp-server \
   --mode careful-editor \
   --transport stdio
 ```
@@ -204,7 +204,7 @@ CLI は npm パッケージとして公開されており、`npx` または `nod
 
 ```bash
 # npm パッケージを利用する場合（推奨）
-npx @nogataka/smart-edit smart-edit <command>
+npx @nogataka/smart-edit <command>
 
 # ローカル開発時
 node dist/cli.js <command>
@@ -216,28 +216,28 @@ pnpm exec tsx src/smart-edit/cli.ts <command>
 
 1. **smart-edit 管理ディレクトリの生成**
    ```bash
-   npx @nogataka/smart-edit smart-edit config edit
+   npx @nogataka/smart-edit config edit
    ```
    初回実行時は `~/.smart-edit/smart_edit_config.yml` をテンプレートから生成し、既定エディタで開きます。
 
 2. **プロジェクト設定 (project.yml) の生成**
    ```bash
-   npx @nogataka/smart-edit smart-edit project generate-yml /path/to/project
+   npx @nogataka/smart-edit project generate-yml /path/to/project
    ```
    言語を手動指定したい場合は `--language <lang>` を付与します。生成された YAML をプロジェクトルートに配置してください。
 
 3. **モード / コンテキストの確認とカスタマイズ**
    ```bash
    # 一覧表示
-   npx @nogataka/smart-edit smart-edit mode list
-   npx @nogataka/smart-edit smart-edit context list
+   npx @nogataka/smart-edit mode list
+   npx @nogataka/smart-edit context list
 
    # テンプレートからコピー
-   npx @nogataka/smart-edit smart-edit mode create --from-internal default-editor
+   npx @nogataka/smart-edit mode create --from-internal default-editor
 
    # 編集 / 削除
-   npx @nogataka/smart-edit smart-edit mode edit <name>
-   npx @nogataka/smart-edit smart-edit context delete <name>
+   npx @nogataka/smart-edit mode edit <name>
+   npx @nogataka/smart-edit context delete <name>
    ```
 
 4. **プロンプトテンプレートの更新**
@@ -246,7 +246,7 @@ pnpm exec tsx src/smart-edit/cli.ts <command>
 ### 2. MCP サーバーの起動
 
 ```bash
-npx @nogataka/smart-edit smart-edit start-mcp-server \
+npx @nogataka/smart-edit start-mcp-server \
   --project /path/to/project \
   --context ide-assistant \
   --mode default-editor \
@@ -255,7 +255,7 @@ npx @nogataka/smart-edit smart-edit start-mcp-server \
 
 ランタイムの自動インストールをスキップする場合は環境変数を設定します：
 ```bash
-SMART_EDIT_SKIP_RUNTIME_INSTALL=1 npx @nogataka/smart-edit smart-edit start-mcp-server ...
+SMART_EDIT_SKIP_RUNTIME_INSTALL=1 npx @nogataka/smart-edit start-mcp-server ...
 ```
 
 主なオプション:
@@ -290,7 +290,7 @@ SMART_EDIT_SKIP_RUNTIME_INSTALL=1 npx @nogataka/smart-edit smart-edit start-mcp-
 ```toml
 [mcp_servers.smart-edit]
 command = "npx"
-args = ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--context", "codex", "--transport", "stdio"]
+args = ["-y", "@nogataka/smart-edit@latest", "start-mcp-server", "--context", "codex", "--transport", "stdio"]
 ```
 
 CLI 側の `--context` や `--mode` は必要に応じて追加してください。`smart-edit` コマンドは `package.json` の `bin.smart-edit` で `./dist/cli.js` にマッピングされています。
@@ -299,13 +299,13 @@ CLI 側の `--context` や `--mode` は必要に応じて追加してくださ�
 
 ```bash
 # プロジェクト設定 YAML の生成
-npx @nogataka/smart-edit smart-edit project generate-yml /path/to/project
+npx @nogataka/smart-edit project generate-yml /path/to/project
 
 # 有効化されているツールを確認
-npx @nogataka/smart-edit smart-edit tools list
+npx @nogataka/smart-edit tools list
 
 # ツールごとの説明を表示
-npx @nogataka/smart-edit smart-edit tools list
+npx @nogataka/smart-edit tools list
 ```
 
 ### 4. メモリ機能
@@ -398,10 +398,10 @@ Smart Edit は MCP (Model Context Protocol) サーバーとして動作し、様
 
 ```bash
 # --project なし（推奨: 柔軟に複数プロジェクトを切り替え可能）
-npx @nogataka/smart-edit smart-edit start-mcp-server --transport stdio
+npx @nogataka/smart-edit start-mcp-server --transport stdio
 
 # --project あり（特定プロジェクトに固定する場合）
-npx @nogataka/smart-edit smart-edit start-mcp-server --project /path/to/project --transport stdio
+npx @nogataka/smart-edit start-mcp-server --project /path/to/project --transport stdio
 ```
 
 以下の各クライアント設定例では `--project` を省略していますが、必要に応じて追加できます。
@@ -430,16 +430,16 @@ Claude Code ではプロジェクトごとに MCP サーバーを追加します
 
 ```bash
 # プロジェクトのルートディレクトリで実行
-claude mcp add smart-edit -- npx -y @nogataka/smart-edit@latest smart-edit start-mcp-server --transport stdio
+claude mcp add smart-edit -- npx -y @nogataka/smart-edit@latest start-mcp-server --transport stdio
 ```
 
 **オプション付きの例:**
 ```bash
 # プロジェクトを指定する場合
-claude mcp add smart-edit -- npx -y @nogataka/smart-edit@latest smart-edit start-mcp-server --project "$(pwd)" --transport stdio
+claude mcp add smart-edit -- npx -y @nogataka/smart-edit@latest start-mcp-server --project "$(pwd)" --transport stdio
 
 # コンテキストを指定する場合
-claude mcp add smart-edit -- npx -y @nogataka/smart-edit@latest smart-edit start-mcp-server --context ide-assistant --transport stdio
+claude mcp add smart-edit -- npx -y @nogataka/smart-edit@latest start-mcp-server --context ide-assistant --transport stdio
 ```
 
 **管理コマンド:**
@@ -457,7 +457,7 @@ claude mcp remove smart-edit # サーバー削除
 ```toml
 [mcp_servers.smart-edit]
 command = "npx"
-args = ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--context", "codex", "--transport", "stdio"]
+args = ["-y", "@nogataka/smart-edit@latest", "start-mcp-server", "--context", "codex", "--transport", "stdio"]
 ```
 
 **使用方法:**
@@ -479,7 +479,7 @@ Cursor では `~/.cursor/mcp.json` (または Settings → MCP) で設定しま�
   "mcpServers": {
     "smart-edit": {
       "command": "npx",
-      "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+      "args": ["-y", "@nogataka/smart-edit@latest", "start-mcp-server", "--transport", "stdio"]
     }
   }
 }
@@ -498,7 +498,7 @@ Windsurf では `~/.codeium/windsurf/mcp_config.json` で設定します。
   "mcpServers": {
     "smart-edit": {
       "command": "npx",
-      "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+      "args": ["-y", "@nogataka/smart-edit@latest", "start-mcp-server", "--transport", "stdio"]
     }
   }
 }
@@ -520,7 +520,7 @@ Continue では `~/.continue/config.json` の `experimental.modelContextProtocol
         "transport": {
           "type": "stdio",
           "command": "npx",
-          "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+          "args": ["-y", "@nogataka/smart-edit@latest", "start-mcp-server", "--transport", "stdio"]
         }
       }
     ]
@@ -541,7 +541,7 @@ Cline では VS Code の設定 (`settings.json`) または Cline の MCP 設定�
   "cline.mcpServers": {
     "smart-edit": {
       "command": "npx",
-      "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+      "args": ["-y", "@nogataka/smart-edit@latest", "start-mcp-server", "--transport", "stdio"]
     }
   }
 }
@@ -561,7 +561,7 @@ Zed では `~/.config/zed/settings.json` の `context_servers` に追加しま�
     "smart-edit": {
       "command": {
         "path": "npx",
-        "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+        "args": ["-y", "@nogataka/smart-edit@latest", "start-mcp-server", "--transport", "stdio"]
       }
     }
   }
@@ -585,7 +585,7 @@ GitHub Copilot は VS Code 1.102 以降で MCP を公式サポートしていま
   "servers": {
     "smart-edit": {
       "command": "npx",
-      "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--transport", "stdio"]
+      "args": ["-y", "@nogataka/smart-edit@latest", "start-mcp-server", "--transport", "stdio"]
     }
   }
 }
@@ -613,7 +613,7 @@ Claude Desktop (Windows/macOS) では `claude_desktop_config.json` に MCP サ�
     "mcpServers": {
       "smart-edit": {
         "command": "npx",
-        "args": ["-y", "@nogataka/smart-edit@latest", "smart-edit", "start-mcp-server", "--context", "desktop-app", "--transport", "stdio"]
+        "args": ["-y", "@nogataka/smart-edit@latest", "start-mcp-server", "--context", "desktop-app", "--transport", "stdio"]
       }
     }
   }
@@ -643,7 +643,7 @@ Claude Desktop (Windows/macOS) では `claude_desktop_config.json` に MCP サ�
           "run", "--rm", "-i",
           "-v", "/path/to/your/projects:/workspace/projects",
           "ghcr.io/nogataka/smart-edit:latest",
-          "smart-edit", "start-mcp-server", "--context", "desktop-app", "--transport", "stdio"
+          "start-mcp-server", "--context", "desktop-app", "--transport", "stdio"
         ]
       }
     }
