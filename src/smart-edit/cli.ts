@@ -623,13 +623,12 @@ export function createSmartEditCli(options: CreateCliOptions = {}): Command {
       try {
         await handleStartMcpServer(opts, normalizedProjectArg);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        const stack = error instanceof Error ? error.stack : undefined;
-        // Write directly to stderr (bypasses vitest mocks) for debugging CI failures
-        process.stderr.write(`\n[start-mcp-server] Error: ${message}\n`);
-        if (stack) {
-          process.stderr.write(`[start-mcp-server] Stack: ${stack}\n`);
+        // In test environment, rethrow the error so vitest can display it properly
+        // (this.error() calls process.exit which vitest intercepts, hiding the actual error)
+        if (process.env.SMART_EDIT_SKIP_EDITOR) {
+          throw error;
         }
+        const message = error instanceof Error ? error.message : String(error);
         this.error(`${message}\n`, { exitCode: 1 });
       }
     });
