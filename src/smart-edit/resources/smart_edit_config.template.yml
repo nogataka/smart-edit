@@ -15,12 +15,12 @@ gui_log_window: False
 # window being updated. Since we can't control how agno or Claude Desktop start Smart-Edit,
 # we have to live with this limitation for now.
 
-web_dashboard: True
-# whether to open the Smart-Edit web dashboard (which will be accessible through your web browser) that
-# shows Smart-Edit's current session logs - as an alternative to the GUI log window which
-# is supported on all platforms.
+web_dashboard: False
+# whether to open the Smart-Edit single-instance web dashboard for this MCP server.
+# Note: For multi-instance management, use `npx @nogataka/smart-edit start-dashboard` instead.
+# The single-instance dashboard is deprecated in favor of the unified dashboard.
 
-web_dashboard_open_on_launch: True
+web_dashboard_open_on_launch: False
 # whether to open a browser window with the web dashboard when Smart-Edit starts (provided that web_dashboard
 # is enabled). If set to False, you can still open the dashboard manually by navigating to
 # http://localhost:24282/dashboard/ in your web browser.

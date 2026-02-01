@@ -525,8 +525,8 @@ export class SmartEditConfig extends ToolInclusionDefinition {
     this.guiLogWindowEnabled = init.guiLogWindowEnabled ?? false;
     this.logLevel = init.logLevel ?? 20;
     this.traceLspCommunication = init.traceLspCommunication ?? false;
-    this.webDashboard = init.webDashboard ?? true;
-    this.webDashboardOpenOnLaunch = init.webDashboardOpenOnLaunch ?? true;
+    this.webDashboard = init.webDashboard ?? false;
+    this.webDashboardOpenOnLaunch = init.webDashboardOpenOnLaunch ?? false;
     this.toolTimeout = init.toolTimeout ?? DEFAULT_TOOL_TIMEOUT;
     this.loadedCommentedYaml = init.loadedCommentedYaml;
     this.configFilePath = init.configFilePath ?? null;
@@ -628,8 +628,8 @@ export class SmartEditConfig extends ToolInclusionDefinition {
       guiLogWindowEnabled: isRunningInDocker()
         ? false
         : asBoolean(parsed.gui_log_window ?? parsed.gui_log_window_enabled, false),
-      webDashboard: asBoolean(parsed.web_dashboard, true),
-      webDashboardOpenOnLaunch: asBoolean(parsed.web_dashboard_open_on_launch, true),
+      webDashboard: asBoolean(parsed.web_dashboard, false),
+      webDashboardOpenOnLaunch: asBoolean(parsed.web_dashboard_open_on_launch, false),
       toolTimeout: parsed.tool_timeout ?? DEFAULT_TOOL_TIMEOUT,
       traceLspCommunication: asBoolean(parsed.trace_lsp_communication, false),
       excludedTools: parsed.excluded_tools,
