@@ -621,10 +621,10 @@ export function createSmartEditCli(options: CreateCliOptions = {}): Command {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         const stack = error instanceof Error ? error.stack : undefined;
-        // Log to stderr for debugging (visible in CI logs)
-        console.error('[start-mcp-server] Error:', message);
+        // Write directly to stderr (bypasses vitest mocks) for debugging CI failures
+        process.stderr.write(`\n[start-mcp-server] Error: ${message}\n`);
         if (stack) {
-          console.error('[start-mcp-server] Stack:', stack);
+          process.stderr.write(`[start-mcp-server] Stack: ${stack}\n`);
         }
         this.error(`${message}\n`, { exitCode: 1 });
       }
