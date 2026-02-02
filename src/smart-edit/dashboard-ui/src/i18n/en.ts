@@ -119,7 +119,18 @@ export const en = {
     shutdownConfirm: 'This will fully terminate the Smart Edit server.',
     project: 'Project',
     noProject: 'No project active',
-    instances: 'Projects'
+    instances: 'Projects',
+    onboardingCompleted: 'Onboarded',
+    onboardingNotCompleted: 'Not onboarded'
+  },
+
+  // Onboarding Modal
+  onboarding: {
+    title: 'Onboarding Information',
+    memories: 'Memories',
+    noMemories: 'No memories available',
+    loading: 'Loading...',
+    close: 'Close'
   },
 
   // Theme

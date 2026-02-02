@@ -1,8 +1,15 @@
+import { useState, useEffect } from 'react';
 import { useDashboard } from '../../context/DashboardContext';
 import { useMultiInstance } from '../../context/MultiInstanceContext';
 import { useTranslation } from '../../i18n';
 import { shutdownServer } from '../../utils/api';
 import type { InstanceInfo } from '../../types';
+import { OnboardingModal } from '../onboarding/OnboardingModal';
+
+interface OnboardingInfo {
+  completed: boolean;
+  memories: string[];
+}
 
 function LogoIcon() {
   return (
@@ -80,6 +87,36 @@ export function Sidebar() {
   const { instances, activeInstanceId, isMultiInstanceMode } = multiState;
   const { t } = useTranslation();
 
+  const [onboardingInfo, setOnboardingInfo] = useState<OnboardingInfo | null>(null);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+
+  // Fetch onboarding info when project changes
+  useEffect(() => {
+    if (!activeProject) {
+      setOnboardingInfo(null);
+      return;
+    }
+
+    const fetchOnboardingInfo = async () => {
+      try {
+        const response = await fetch('/api/instance-info');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.onboarding) {
+            setOnboardingInfo({
+              completed: data.onboarding.completed,
+              memories: data.onboarding.memories ?? []
+            });
+          }
+        }
+      } catch {
+        // Ignore fetch errors
+      }
+    };
+
+    fetchOnboardingInfo();
+  }, [activeProject]);
+
   const handleShutdown = () => {
     if (window.confirm(t('sidebar.shutdownConfirm'))) {
       shutdownServer();
@@ -126,6 +163,15 @@ export function Sidebar() {
                   <span className="project-name-text" title={activeProject}>
                     {projectName}
                   </span>
+                  {onboardingInfo?.completed && (
+                    <button
+                      className="onboarding-badge"
+                      onClick={() => setShowOnboardingModal(true)}
+                      title={t('sidebar.onboardingCompleted')}
+                    >
+                      ✓
+                    </button>
+                  )}
                 </div>
                 <div className="project-path" title={activeProject}>
                   {activeProject}
@@ -149,6 +195,13 @@ export function Sidebar() {
           <span>{t('nav.shutdown')}</span>
         </button>
       </div>
+
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboardingModal}
+        onClose={() => setShowOnboardingModal(false)}
+        memories={onboardingInfo?.memories ?? []}
+      />
     </aside>
   );
 }

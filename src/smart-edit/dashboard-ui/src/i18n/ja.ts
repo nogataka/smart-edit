@@ -119,7 +119,18 @@ export const ja = {
     shutdownConfirm: 'Smart Edit サーバーを完全に終了します。',
     project: 'プロジェクト',
     noProject: 'プロジェクト未設定',
-    instances: 'プロジェクト'
+    instances: 'プロジェクト',
+    onboardingCompleted: 'オンボーディング済み',
+    onboardingNotCompleted: '未オンボーディング'
+  },
+
+  // Onboarding Modal
+  onboarding: {
+    title: 'オンボーディング情報',
+    memories: 'メモリ一覧',
+    noMemories: 'メモリがありません',
+    loading: '読み込み中...',
+    close: '閉じる'
   },
 
   // Theme

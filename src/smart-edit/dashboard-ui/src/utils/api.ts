@@ -67,3 +67,15 @@ export async function fetchTokenEstimatorName(): Promise<string> {
 export async function shutdownServer(): Promise<void> {
   await fetch('/shutdown', { method: 'PUT' });
 }
+
+export async function fetchMemoryContent(name: string, baseUrl?: string): Promise<string> {
+  const url = baseUrl
+    ? `${baseUrl}/api/memory/${encodeURIComponent(name)}`
+    : `/api/memory/${encodeURIComponent(name)}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch memory: ${response.statusText}`);
+  }
+  const data = await response.json();
+  return data.content ?? '';
+}

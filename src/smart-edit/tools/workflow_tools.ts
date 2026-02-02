@@ -1,4 +1,6 @@
+import fs from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
 
 import {
   Tool,
@@ -109,6 +111,77 @@ async function callAgentSystemPrompt(agent: SmartEditAgentLike): Promise<string>
   throw new Error('Agent does not implement a system prompt creation method.');
 }
 
+/**
+ * Auto-collects project symbols from the codebase.
+ * This provides fallback data when the AI doesn't pass arguments.
+ */
+function autoCollectProjectSymbols(projectRoot: string): Partial<ProjectSymbolsMemory> {
+  const result: Partial<ProjectSymbolsMemory> = {};
+
+  // 1. Collect dependencies from package.json
+  const pkgPath = path.join(projectRoot, 'package.json');
+  if (fs.existsSync(pkgPath)) {
+    try {
+      const pkgContent = fs.readFileSync(pkgPath, 'utf-8');
+      const pkg = JSON.parse(pkgContent) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      result.dependencies = {
+        ...(pkg.dependencies ?? {}),
+        ...(pkg.devDependencies ?? {})
+      };
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  // 2. Detect common utility directories
+  const utilityPatterns = ['src/lib', 'src/utils', 'src/helpers', 'lib', 'utils', 'src/util'];
+  result.utilityDirs = utilityPatterns.filter((dir) => {
+    const fullPath = path.join(projectRoot, dir);
+    try {
+      return fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory();
+    } catch {
+      return false;
+    }
+  });
+
+  // 3. Detect common component directories and list components
+  const componentPatterns = ['src/components/common', 'src/components/ui', 'src/components/shared'];
+  const foundComponentDirs = componentPatterns.filter((dir) => {
+    const fullPath = path.join(projectRoot, dir);
+    try {
+      return fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory();
+    } catch {
+      return false;
+    }
+  });
+
+  if (foundComponentDirs.length > 0) {
+    const components: string[] = [];
+    for (const dir of foundComponentDirs) {
+      try {
+        const fullPath = path.join(projectRoot, dir);
+        const entries = fs.readdirSync(fullPath);
+        for (const entry of entries) {
+          if (entry.endsWith('.tsx') || entry.endsWith('.ts') || entry.endsWith('.jsx') || entry.endsWith('.js')) {
+            const name = entry.replace(/\.(tsx?|jsx?)$/, '');
+            if (!components.includes(name)) {
+              components.push(name);
+            }
+          }
+        }
+      } catch {
+        // Ignore read errors
+      }
+    }
+    result.commonComponents = components;
+  }
+
+  return result;
+}
+
 export class CheckOnboardingPerformedTool extends Tool {
   static override readonly description =
     'Checks whether project onboarding was already performed and if there are significant changes since last onboarding.';
@@ -150,7 +223,8 @@ export class CheckOnboardingPerformedTool extends Tool {
         const lastCommit = projectSymbols.lastCommit;
 
         if (lastCommit) {
-          const currentCommit = await getCurrentCommit();
+          const projectRoot = this.agent.getActiveProject()?.projectRoot;
+          const currentCommit = await getCurrentCommit({ cwd: projectRoot });
 
           if (currentCommit && currentCommit !== lastCommit) {
             const changeInfo = await hasSignificantChanges(lastCommit);
@@ -208,9 +282,19 @@ export class OnboardingTool extends Tool {
 export class CollectProjectSymbolsTool extends Tool {
   static override readonly description =
     'Collects and saves project symbols (utilities, components, dependencies) to the project-symbols memory. ' +
-    'Call this after onboarding to enable duplicate detection features.';
+    'Call this after onboarding to enable duplicate detection features. ' +
+    'Basic information is auto-collected; your input is merged to add project-specific patterns.';
 
   override async apply(args: Record<string, unknown> = {}): Promise<string> {
+    // Get project root from the active project
+    const activeProject = this.agent.getActiveProject();
+    const projectRoot = activeProject?.projectRoot;
+
+    if (!projectRoot) {
+      throw new Error('No active project. Please activate a project first.');
+    }
+
+    // AI-provided arguments
     const {
       utility_dirs = [],
       common_components = [],
@@ -221,16 +305,33 @@ export class CollectProjectSymbolsTool extends Tool {
       dependencies?: Record<string, string>;
     };
 
-    // Get current git commit
-    const currentCommit = await getCurrentCommit();
+    // Auto-collect from the project
+    const autoCollected = autoCollectProjectSymbols(projectRoot);
+
+    // Merge: auto-collected as base, AI input added on top
+    const mergedDependencies: Record<string, string> = {
+      ...(autoCollected.dependencies ?? {}),
+      ...dependencies
+    };
+
+    const mergedUtilityDirs = [
+      ...new Set([...(autoCollected.utilityDirs ?? []), ...utility_dirs])
+    ];
+
+    const mergedComponents = [
+      ...new Set([...(autoCollected.commonComponents ?? []), ...common_components])
+    ];
+
+    // Get current git commit from project directory
+    const currentCommit = await getCurrentCommit({ cwd: projectRoot });
 
     // Build the project symbols memory content
     const projectSymbols: ProjectSymbolsMemory = {
       lastCommit: currentCommit ?? 'unknown',
       lastUpdated: new Date().toISOString(),
-      dependencies,
-      utilityDirs: utility_dirs,
-      commonComponents: common_components
+      dependencies: mergedDependencies,
+      utilityDirs: mergedUtilityDirs,
+      commonComponents: mergedComponents
     };
 
     // Save to memory
@@ -244,14 +345,25 @@ export class CollectProjectSymbolsTool extends Tool {
       })
     );
 
+    // Build summary showing what was auto-collected vs AI-provided
+    const autoDepCount = Object.keys(autoCollected.dependencies ?? {}).length;
+    const aiDepCount = Object.keys(dependencies).length;
+    const autoUtilCount = (autoCollected.utilityDirs ?? []).length;
+    const aiUtilCount = utility_dirs.length;
+    const autoCompCount = (autoCollected.commonComponents ?? []).length;
+    const aiCompCount = common_components.length;
+
     const lines = [
       `Project symbols saved to memory: ${PROJECT_SYMBOLS_MEMORY}`,
       '',
       `- Commit: ${projectSymbols.lastCommit}`,
       `- Updated: ${projectSymbols.lastUpdated}`,
-      `- Utility directories: ${utility_dirs.length > 0 ? utility_dirs.join(', ') : 'none specified'}`,
-      `- Common components: ${common_components.length > 0 ? common_components.join(', ') : 'none specified'}`,
-      `- Dependencies tracked: ${Object.keys(dependencies).length}`,
+      '',
+      '## Collected Data',
+      '',
+      `- Dependencies: ${Object.keys(mergedDependencies).length} total (${autoDepCount} auto-collected, ${aiDepCount} AI-provided)`,
+      `- Utility directories: ${mergedUtilityDirs.length > 0 ? mergedUtilityDirs.join(', ') : 'none found'} (${autoUtilCount} auto, ${aiUtilCount} AI)`,
+      `- Common components: ${mergedComponents.length > 0 ? mergedComponents.join(', ') : 'none found'} (${autoCompCount} auto, ${aiCompCount} AI)`,
       '',
       'This information will be used for duplicate detection in careful-editor mode.',
       'The system will alert you when significant changes occur since this onboarding.'

@@ -28,7 +28,9 @@ const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
 };
 
 interface DashboardAgentLike {
-  getActiveProject(): { projectName?: string | null } | null;
+  getActiveProject(): { projectName?: string | null; projectRoot?: string } | null;
+  listMemories?(): string[] | Promise<string[]>;
+  loadMemory?(name: string): string | Promise<string>;
 }
 
 export interface DashboardThread {
@@ -136,6 +138,36 @@ export class SmartEditDashboardAPI {
 
   clearToolStats(): void {
     this.toolUsageStats?.clear();
+  }
+
+  /**
+   * Get the list of available memories for the active project.
+   */
+  private async getMemoriesList(): Promise<string[]> {
+    if (typeof this.agent.listMemories === 'function') {
+      try {
+        const memories = await Promise.resolve(this.agent.listMemories());
+        return Array.isArray(memories) ? memories : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  /**
+   * Load the content of a specific memory.
+   */
+  private async loadMemoryContent(name: string): Promise<string | null> {
+    if (typeof this.agent.loadMemory === 'function') {
+      try {
+        const content = await Promise.resolve(this.agent.loadMemory(name));
+        return typeof content === 'string' ? content : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
   }
 
   shutdown(): void {
@@ -443,12 +475,19 @@ export class SmartEditDashboardAPI {
             this.respondMethodNotAllowed(res);
             return;
           }
-          this.sendJson(res, 200, {
-            port: this.listeningPort,
-            project: this.agent.getActiveProject()?.projectName ?? null
-          });
+          await this.handleInstanceInfo(res);
           return;
         default:
+          // Handle dynamic routes like /api/memory/:name
+          if (pathname.startsWith('/api/memory/')) {
+            if (method !== 'GET') {
+              this.respondMethodNotAllowed(res);
+              return;
+            }
+            const memoryName = decodeURIComponent(pathname.replace('/api/memory/', ''));
+            await this.handleGetMemory(memoryName, res);
+            return;
+          }
           this.respondNotFound(res);
       }
     } catch (error) {
@@ -482,6 +521,37 @@ export class SmartEditDashboardAPI {
       }
       throw error;
     }
+  }
+
+  private async handleInstanceInfo(res: ServerResponse): Promise<void> {
+    const activeProject = this.agent.getActiveProject();
+    const memories = await this.getMemoriesList();
+
+    this.sendJson(res, 200, {
+      port: this.listeningPort,
+      project: activeProject?.projectName ?? null,
+      projectPath: activeProject?.projectRoot ?? null,
+      onboarding: {
+        completed: memories.length > 0,
+        memories
+      }
+    });
+  }
+
+  private async handleGetMemory(memoryName: string, res: ServerResponse): Promise<void> {
+    if (!memoryName || memoryName.length === 0) {
+      this.sendJson(res, 400, { error: 'Memory name is required' });
+      return;
+    }
+
+    const content = await this.loadMemoryContent(memoryName);
+
+    if (content === null) {
+      this.sendJson(res, 404, { error: 'Memory not found', name: memoryName });
+      return;
+    }
+
+    this.sendJson(res, 200, { name: memoryName, content });
   }
 
   private async handleGetLogMessages(req: IncomingMessage, res: ServerResponse): Promise<void> {
