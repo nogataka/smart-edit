@@ -54,6 +54,7 @@ import {
   coerceLanguage
 } from '../smart-lsp/ls_config.js';
 import { ensureDefaultSubprocessOptions } from '../smart-lsp/util/subprocess_util.js';
+import { smartEditVersion } from './version.js';
 
 type TransportChoice = 'stdio' | 'sse' | 'streamable-http';
 
@@ -568,6 +569,7 @@ function ensurePromptYamlName(promptYamlName: string): string {
 export function createSmartEditCli(options: CreateCliOptions = {}): Command {
   const program = new Command('smart-edit');
   program
+    .version(smartEditVersion(), '-v, --version', 'バージョンを表示します')
     .description('Smart-Edit CLI commands. 各コマンドの詳細は `<command> --help` を参照してください。')
     .showHelpAfterError('(ヘルプ: smart-edit --help)')
     .configureOutput({
