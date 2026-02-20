@@ -289,6 +289,15 @@ export class SemanticVectorDB {
     );
   }
 
+  getSymbolByNamePath(namePath: string, filePath: string): { id: number } | null {
+    const row = this.db.prepare(`
+      SELECT s.id FROM semantic_symbols s
+      JOIN semantic_files f ON s.file_id = f.id
+      WHERE s.name_path = ? AND f.path = ?
+    `).get(namePath, filePath) as { id: number } | undefined;
+    return row ?? null;
+  }
+
   setMetadata(key: string, value: string): void {
     this.db.prepare(
       'INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)'
