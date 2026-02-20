@@ -47,6 +47,15 @@ export interface SmartEditConfigLike {
   toolTimeout: number;
   projectNames: string[];
   removeProject?(projectName: string): void;
+  semanticSearch?: {
+    provider: 'openai' | 'azure_openai';
+    model: string;
+    openaiApiKey?: string;
+    azureEndpoint?: string;
+    azureApiKey?: string;
+    azureApiVersion?: string;
+    azureDeployment?: string;
+  };
 }
 
 export interface ProjectConfigLike {

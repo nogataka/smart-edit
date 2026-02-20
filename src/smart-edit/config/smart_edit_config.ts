@@ -163,6 +163,15 @@ const SMART_EDIT_CONFIG_YAML_SCHEMA = z
     token_count_estimator: z.string().optional(),
     default_max_tool_answer_chars: NUMBER_INPUT_SCHEMA,
     ls_specific_settings: z.record(z.unknown()).optional(),
+    semantic_search: z.object({
+      provider: z.string().optional(),
+      model: z.string().optional(),
+      openai_api_key: z.string().optional(),
+      azure_endpoint: z.string().optional(),
+      azure_api_key: z.string().optional(),
+      azure_api_version: z.string().optional(),
+      azure_deployment: z.string().optional()
+    }).optional(),
     projects: z.array(z.string(), {
       required_error: '`projects` key not found in Smart-Edit configuration.',
       invalid_type_error: '`projects` は文字列の配列である必要があります。'
@@ -498,6 +507,15 @@ export interface SmartEditConfigInit extends ToolInclusionDefinitionInit {
   tokenCountEstimator?: RegisteredTokenCountEstimator;
   defaultMaxToolAnswerChars?: number;
   lsSpecificSettings?: Record<string, unknown>;
+  semanticSearch?: {
+    provider: 'openai' | 'azure_openai';
+    model: string;
+    openaiApiKey?: string;
+    azureEndpoint?: string;
+    azureApiKey?: string;
+    azureApiVersion?: string;
+    azureDeployment?: string;
+  };
 }
 
 export class SmartEditConfig extends ToolInclusionDefinition {
@@ -515,6 +533,15 @@ export class SmartEditConfig extends ToolInclusionDefinition {
   tokenCountEstimator: RegisteredTokenCountEstimator;
   defaultMaxToolAnswerChars: number;
   lsSpecificSettings: Record<string, unknown>;
+  semanticSearch?: {
+    provider: 'openai' | 'azure_openai';
+    model: string;
+    openaiApiKey?: string;
+    azureEndpoint?: string;
+    azureApiKey?: string;
+    azureApiVersion?: string;
+    azureDeployment?: string;
+  };
 
   static readonly CONFIG_FILE = 'smart_edit_config.yml';
   static readonly CONFIG_FILE_DOCKER = 'smart_edit_config.docker.yml';
@@ -535,6 +562,7 @@ export class SmartEditConfig extends ToolInclusionDefinition {
     this.tokenCountEstimator = init.tokenCountEstimator ?? RegisteredTokenCountEstimator.TIKTOKEN_GPT4O;
     this.defaultMaxToolAnswerChars = init.defaultMaxToolAnswerChars ?? 150_000;
     this.lsSpecificSettings = { ...(init.lsSpecificSettings ?? {}) };
+    this.semanticSearch = init.semanticSearch;
   }
 
   static generateConfigFile(configFilePath: string): void {
@@ -623,6 +651,17 @@ export class SmartEditConfig extends ToolInclusionDefinition {
       }
     }
 
+    const semanticSearchRaw = parsed.semantic_search as Record<string, unknown> | undefined;
+    const semanticSearch = semanticSearchRaw ? {
+      provider: (semanticSearchRaw.provider as string ?? 'openai') as 'openai' | 'azure_openai',
+      model: (semanticSearchRaw.model as string) ?? 'text-embedding-3-small',
+      openaiApiKey: semanticSearchRaw.openai_api_key as string | undefined,
+      azureEndpoint: semanticSearchRaw.azure_endpoint as string | undefined,
+      azureApiKey: semanticSearchRaw.azure_api_key as string | undefined,
+      azureApiVersion: semanticSearchRaw.azure_api_version as string | undefined,
+      azureDeployment: semanticSearchRaw.azure_deployment as string | undefined,
+    } : undefined;
+
     const config = new SmartEditConfig({
       projects,
       guiLogWindowEnabled: isRunningInDocker()
@@ -640,6 +679,7 @@ export class SmartEditConfig extends ToolInclusionDefinition {
       tokenCountEstimator: normalizeEstimator(parsed.token_count_estimator),
       defaultMaxToolAnswerChars: parsed.default_max_tool_answer_chars ?? 150_000,
       lsSpecificSettings: parsed.ls_specific_settings ?? {},
+      semanticSearch,
       loadedCommentedYaml: loaded,
       configFilePath
     });

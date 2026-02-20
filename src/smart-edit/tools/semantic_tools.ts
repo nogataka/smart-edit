@@ -9,7 +9,8 @@ import {
   ToolMarkerCanEdit,
   ToolMarkerDoesNotRequireActiveProject,
   ToolMarkerOptional,
-  ToolMarkerSymbolicRead
+  ToolMarkerSymbolicRead,
+  type SmartEditConfigLike
 } from './tools_base.js';
 import { createSmartEditLogger } from '../util/logging.js';
 import { createEmbeddingProvider } from '../semantic/embedding_provider.js';
@@ -35,7 +36,18 @@ const IGNORE_DIRS = new Set([
   'target', '.idea', '.vscode'
 ]);
 
-function getEmbeddingConfig(): EmbeddingProviderConfig {
+function getEmbeddingConfig(agentConfig?: SmartEditConfigLike['semanticSearch']): EmbeddingProviderConfig {
+  if (agentConfig) {
+    return {
+      provider: agentConfig.provider ?? 'openai',
+      model: agentConfig.model ?? 'text-embedding-3-small',
+      openaiApiKey: agentConfig.openaiApiKey ?? process.env.OPENAI_API_KEY,
+      azureEndpoint: agentConfig.azureEndpoint,
+      azureApiKey: agentConfig.azureApiKey,
+      azureApiVersion: agentConfig.azureApiVersion,
+      azureDeployment: agentConfig.azureDeployment
+    };
+  }
   return {
     provider: 'openai' as const,
     model: process.env.SMART_EDIT_EMBEDDING_MODEL ?? 'text-embedding-3-small',
@@ -101,7 +113,7 @@ export class IndexSemanticSymbolsTool extends Tool {
 
   override async apply(args: IndexSemanticSymbolsInput): Promise<string> {
     const projectRoot = this.getProjectRoot();
-    const config = getEmbeddingConfig();
+    const config = getEmbeddingConfig(this.agent.smartEditConfig.semanticSearch);
     const provider = createEmbeddingProvider(config);
     const dbPath = getDbPath(projectRoot);
     const db = new SemanticVectorDB(dbPath, provider.dimensions);
@@ -210,7 +222,7 @@ export class SemanticSearchTool extends Tool {
 
   override async apply(args: SemanticSearchInput): Promise<string> {
     const projectRoot = this.getProjectRoot();
-    const config = getEmbeddingConfig();
+    const config = getEmbeddingConfig(this.agent.smartEditConfig.semanticSearch);
     const provider = createEmbeddingProvider(config);
     const dbPath = getDbPath(projectRoot);
     const db = new SemanticVectorDB(dbPath, provider.dimensions);
@@ -255,7 +267,7 @@ export class FindSimilarCodeTool extends Tool {
 
   override async apply(args: FindSimilarCodeInput): Promise<string> {
     const projectRoot = this.getProjectRoot();
-    const config = getEmbeddingConfig();
+    const config = getEmbeddingConfig(this.agent.smartEditConfig.semanticSearch);
     const provider = createEmbeddingProvider(config);
     const dbPath = getDbPath(projectRoot);
     const db = new SemanticVectorDB(dbPath, provider.dimensions);
@@ -308,7 +320,7 @@ export class SemanticSearchStatsTool extends Tool {
     }
 
     // Open with a default dimension; we'll read the actual from metadata
-    const config = getEmbeddingConfig();
+    const config = getEmbeddingConfig(this.agent.smartEditConfig.semanticSearch);
     let dimensions = 1536;
     try {
       const provider = createEmbeddingProvider(config);
