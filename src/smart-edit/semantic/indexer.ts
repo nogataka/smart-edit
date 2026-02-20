@@ -67,12 +67,12 @@ export class SemanticIndexer {
     let skippedFiles = 0;
 
     // Phase 1: Determine which files need indexing
-    const filesToIndex: Array<{
+    const filesToIndex: {
       filePath: string;
       relativePath: string;
       hash: string;
       content: string;
-    }> = [];
+    }[] = [];
 
     for (const filePath of filePaths) {
       try {
@@ -85,7 +85,7 @@ export class SemanticIndexer {
 
         // Check if file hash is unchanged
         const existingFile = db.getFileByPath(relativePath);
-        if (existingFile && existingFile.hash === hash) {
+        if (existingFile?.hash === hash) {
           skippedFiles++;
           onProgress?.(`Skipped ${relativePath} (unchanged)`);
           continue;
@@ -93,7 +93,7 @@ export class SemanticIndexer {
 
         filesToIndex.push({ filePath, relativePath, hash, content });
       } catch (err) {
-        log.warn(`Failed to read file ${filePath}: ${err}`);
+        log.warn(`Failed to read file ${filePath}: ${String(err)}`);
       }
     }
 
@@ -102,11 +102,11 @@ export class SemanticIndexer {
     }
 
     // Phase 2: Collect symbols for all files that need indexing
-    const allSymbolEntries: Array<{
+    const allSymbolEntries: {
       fileIndex: number;
       symbol: SymbolInfo;
       summaryText: string;
-    }> = [];
+    }[] = [];
 
     for (let i = 0; i < filesToIndex.length; i++) {
       const file = filesToIndex[i];
@@ -123,7 +123,7 @@ export class SemanticIndexer {
           allSymbolEntries.push({ fileIndex: i, symbol, summaryText });
         }
       } catch (err) {
-        log.warn(`Failed to get symbols for ${file.filePath}: ${err}`);
+        log.warn(`Failed to get symbols for ${file.filePath}: ${String(err)}`);
       }
     }
 

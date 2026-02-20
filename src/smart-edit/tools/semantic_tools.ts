@@ -143,7 +143,7 @@ export class IndexSemanticSymbolsTool extends Tool {
       }
 
       // Build getSymbols callback using LSP symbol retriever
-      const getSymbols = async (filePath: string): Promise<SymbolInfo[]> => {
+      const getSymbols = (filePath: string): Promise<SymbolInfo[]> => {
         const relativePath = path.relative(projectRoot, filePath);
         try {
           const retriever = this.createLanguageServerSymbolRetriever();
@@ -172,10 +172,10 @@ export class IndexSemanticSymbolsTool extends Tool {
               });
             }
           }
-          return result;
+          return Promise.resolve(result);
         } catch (err) {
-          log.warn(`Failed to get symbols for ${relativePath}: ${err}`);
-          return [];
+          log.warn(`Failed to get symbols for ${relativePath}: ${String(err)}`);
+          return Promise.resolve([]);
         }
       };
 
@@ -297,17 +297,17 @@ export class SemanticSearchStatsTool extends Tool {
     'Shows statistics about the semantic search index.';
   static override readonly inputSchema = z.object({});
 
-  override async apply(_args: Record<string, unknown>): Promise<string> {
+  override apply(_args: Record<string, unknown>): Promise<string> {
     let projectRoot: string;
     try {
       projectRoot = this.getProjectRoot();
     } catch {
-      return JSON.stringify({ error: 'No active project. Cannot read semantic index.' });
+      return Promise.resolve(JSON.stringify({ error: 'No active project. Cannot read semantic index.' }));
     }
 
     const dbPath = path.join(projectRoot, '.smart-edit', 'semantic.db');
     if (!fs.existsSync(dbPath)) {
-      return JSON.stringify({
+      return Promise.resolve(JSON.stringify({
         totalFiles: 0,
         totalSymbols: 0,
         lastIndexedAt: null,
@@ -316,7 +316,7 @@ export class SemanticSearchStatsTool extends Tool {
         model: null,
         dimensions: 0,
         message: 'No semantic index found. Run index_semantic_symbols first.'
-      });
+      }));
     }
 
     // Open with a default dimension; we'll read the actual from metadata
@@ -337,12 +337,12 @@ export class SemanticSearchStatsTool extends Tool {
       const storedModel = db.getMetadata('model');
       const storedDimensions = db.getMetadata('dimensions');
 
-      return JSON.stringify({
+      return Promise.resolve(JSON.stringify({
         ...stats,
         provider: storedProvider,
         model: storedModel,
         dimensions: storedDimensions ? Number(storedDimensions) : dimensions
-      });
+      }));
     } finally {
       db.close();
     }

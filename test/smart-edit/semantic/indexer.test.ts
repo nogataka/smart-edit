@@ -1,19 +1,6 @@
 // test/smart-edit/semantic/indexer.test.ts
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { SemanticIndexer } from '../../../src/smart-edit/semantic/indexer.js';
-import type { EmbeddingProvider } from '../../../src/smart-edit/semantic/embedding_provider.js';
-import type { SemanticVectorDB } from '../../../src/smart-edit/semantic/vector_db.js';
-
-function createMockEmbeddingProvider(): EmbeddingProvider {
-  return {
-    embed: vi.fn(async () => new Float32Array([0.1, 0.2, 0.3, 0.4])),
-    embedBatch: vi.fn(async (texts: string[]) =>
-      texts.map(() => new Float32Array([0.1, 0.2, 0.3, 0.4]))
-    ),
-    dimensions: 4,
-    modelName: 'test-model'
-  };
-}
 
 describe('SemanticIndexer', () => {
   describe('buildSummaryText', () => {
@@ -42,7 +29,7 @@ describe('SemanticIndexer', () => {
         { kind: 'Class', name: 'c' },
         { kind: 'Method', name: 'd' }
       ];
-      const filtered = SemanticIndexer.filterSymbolKinds(symbols as any);
+      const filtered = SemanticIndexer.filterSymbolKinds(symbols);
       expect(filtered.map(s => s.name)).toEqual(['a', 'c', 'd']);
     });
   });

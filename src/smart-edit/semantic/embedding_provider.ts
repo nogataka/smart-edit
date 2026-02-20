@@ -21,14 +21,14 @@ export interface EmbeddingProvider {
 }
 
 interface OpenAIEmbeddingResponse {
-  data: Array<{ embedding: number[]; index: number }>;
+  data: { embedding: number[]; index: number }[];
   model: string;
   usage: { prompt_tokens: number; total_tokens: number };
 }
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> {
+async function fetchWithRetry(url: string, options: globalThis.RequestInit, retries = MAX_RETRIES): Promise<globalThis.Response> {
   for (let attempt = 0; attempt <= retries; attempt++) {
-    const response = await fetch(url, options);
+    const response = await globalThis.fetch(url, options);
 
     if (response.ok) {
       return response;
@@ -37,7 +37,7 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_R
     if (response.status === 429 && attempt < retries) {
       const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
       log.warn(`Rate limited (429). Retrying in ${delay}ms (attempt ${attempt + 1}/${retries})`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await new Promise((resolve) => globalThis.setTimeout(resolve, delay));
       continue;
     }
 
@@ -66,7 +66,7 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   }
 
   async embedBatch(texts: string[], onProgress?: (completed: number, total: number) => void): Promise<Float32Array[]> {
-    const results: Float32Array[] = new Array(texts.length);
+    const results: Float32Array[] = Array.from<Float32Array>({ length: texts.length });
     let completed = 0;
 
     const chunks: { startIndex: number; texts: string[] }[] = [];
@@ -95,7 +95,7 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
       }
 
       if (i + PARALLEL_BATCHES < chunks.length) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => globalThis.setTimeout(resolve, 100));
       }
     }
 
@@ -143,7 +143,7 @@ export class AzureOpenAIEmbeddingProvider implements EmbeddingProvider {
   }
 
   async embedBatch(texts: string[], onProgress?: (completed: number, total: number) => void): Promise<Float32Array[]> {
-    const results: Float32Array[] = new Array(texts.length);
+    const results: Float32Array[] = Array.from<Float32Array>({ length: texts.length });
     let completed = 0;
 
     const chunks: { startIndex: number; texts: string[] }[] = [];
@@ -172,7 +172,7 @@ export class AzureOpenAIEmbeddingProvider implements EmbeddingProvider {
       }
 
       if (i + PARALLEL_BATCHES < chunks.length) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => globalThis.setTimeout(resolve, 100));
       }
     }
 
@@ -224,5 +224,5 @@ export function createEmbeddingProvider(config: EmbeddingProviderConfig): Embedd
     });
   }
 
-  throw new Error(`Unknown embedding provider: ${config.provider}`);
+  throw new Error(`Unknown embedding provider: ${String(config.provider)}`);
 }

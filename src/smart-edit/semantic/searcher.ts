@@ -33,18 +33,20 @@ export class SemanticSearcher {
     return results.filter(r => r.similarity >= options.threshold).slice(0, options.limit);
   }
 
-  async findSimilar(options: FindSimilarOptions): Promise<SemanticSearchResult[]> {
+  findSimilar(options: FindSimilarOptions): Promise<SemanticSearchResult[]> {
     const symbol = this.db.getSymbolByNamePath(options.symbolNamePath, options.filePath);
     if (!symbol) {
-      return [];
+      return Promise.resolve([]);
     }
     const embedding = this.db.getSymbolEmbedding(symbol.id);
     if (!embedding) {
-      return [];
+      return Promise.resolve([]);
     }
     const results = this.db.searchSimilar(embedding, options.limit + 10);
-    return results
-      .filter(r => r.namePath !== options.symbolNamePath && r.similarity >= options.threshold)
-      .slice(0, options.limit);
+    return Promise.resolve(
+      results
+        .filter(r => r.namePath !== options.symbolNamePath && r.similarity >= options.threshold)
+        .slice(0, options.limit)
+    );
   }
 }

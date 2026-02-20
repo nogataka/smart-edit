@@ -8,8 +8,8 @@ import type { SemanticSearchResult } from '../../../src/smart-edit/semantic/type
 describe('SemanticSearcher', () => {
   function createMockProvider(): EmbeddingProvider {
     return {
-      embed: vi.fn(async () => new Float32Array([1, 0, 0, 0])),
-      embedBatch: vi.fn(async (texts: string[]) => texts.map(() => new Float32Array([1, 0, 0, 0]))),
+      embed: vi.fn(() => Promise.resolve(new Float32Array([1, 0, 0, 0]))),
+      embedBatch: vi.fn((texts: string[]) => Promise.resolve(texts.map(() => new Float32Array([1, 0, 0, 0])))),
       dimensions: 4,
       modelName: 'test-model'
     };
@@ -33,7 +33,9 @@ describe('SemanticSearcher', () => {
 
     const results = await searcher.search({ query: 'authentication handler', limit: 10, threshold: 0.5 });
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(provider.embed).toHaveBeenCalledWith('authentication handler');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(db.searchSimilar).toHaveBeenCalled();
     expect(results).toHaveLength(1);
     expect(results[0].namePath).toBe('/auth');
@@ -64,7 +66,9 @@ describe('SemanticSearcher', () => {
 
     const results = await searcher.findSimilar({ symbolNamePath: '/auth', filePath: 'src/auth.ts', limit: 10, threshold: 0.5 });
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(db.getSymbolByNamePath).toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(db.getSymbolEmbedding).toHaveBeenCalled();
     expect(results).toHaveLength(1);
   });

@@ -1,5 +1,5 @@
 // test/smart-edit/semantic/embedding_provider.test.ts
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   OpenAIEmbeddingProvider,
   AzureOpenAIEmbeddingProvider,
@@ -11,16 +11,16 @@ import type { EmbeddingProviderConfig } from '../../../src/smart-edit/semantic/t
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-function createMockEmbeddingResponse(vectors: number[][]): Response {
+function createMockEmbeddingResponse(vectors: number[][]): globalThis.Response {
   return {
     ok: true,
     status: 200,
-    json: async () => ({
+    json: () => Promise.resolve({
       data: vectors.map((v, i) => ({ embedding: v, index: i })),
       model: 'text-embedding-3-small',
       usage: { prompt_tokens: 10, total_tokens: 10 }
     })
-  } as unknown as Response;
+  } as unknown as globalThis.Response;
 }
 
 describe('OpenAIEmbeddingProvider', () => {
@@ -50,10 +50,10 @@ describe('OpenAIEmbeddingProvider', () => {
     expect(result.length).toBe(1536);
     expect(mockFetch).toHaveBeenCalledOnce();
 
-    const [url, options] = mockFetch.mock.calls[0];
+    const [url, options] = mockFetch.mock.calls[0] as [string, { method: string; body: string; headers: Record<string, string> }];
     expect(url).toBe('https://api.openai.com/v1/embeddings');
     expect(options.method).toBe('POST');
-    const body = JSON.parse(options.body);
+    const body = JSON.parse(options.body) as { input: string[]; model: string };
     expect(body.input).toEqual(['test text']);
     expect(body.model).toBe('text-embedding-3-small');
   });
@@ -79,8 +79,8 @@ describe('OpenAIEmbeddingProvider', () => {
       ok: false,
       status: 429,
       statusText: 'Too Many Requests',
-      json: async () => ({ error: { message: 'Rate limit exceeded' } })
-    } as unknown as Response;
+      json: () => Promise.resolve({ error: { message: 'Rate limit exceeded' } })
+    } as unknown as globalThis.Response;
 
     const vector = Array.from({ length: 1536 }, () => 0.1);
     const successResponse = createMockEmbeddingResponse([vector]);
@@ -122,7 +122,7 @@ describe('AzureOpenAIEmbeddingProvider', () => {
 
     await provider.embed('test');
 
-    const [url, options] = mockFetch.mock.calls[0];
+    const [url, options] = mockFetch.mock.calls[0] as [string, { method: string; body: string; headers: Record<string, string> }];
     expect(url).toContain('my-resource.openai.azure.com');
     expect(url).toContain('my-embedding');
     expect(url).toContain('api-version=2024-02-01');

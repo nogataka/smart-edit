@@ -27,8 +27,8 @@ function createDeterministicProvider(): EmbeddingProvider {
   }
 
   return {
-    embed: vi.fn(async (text: string) => textToVector(text)),
-    embedBatch: vi.fn(async (texts: string[]) => texts.map(textToVector)),
+    embed: vi.fn((text: string) => Promise.resolve(textToVector(text))),
+    embedBatch: vi.fn((texts: string[]) => Promise.resolve(texts.map(textToVector))),
     dimensions: 4,
     modelName: 'test-deterministic',
   };
@@ -87,14 +87,14 @@ export function findUserByEmail(email: string) {
     // Define mock symbols
     const symbolsByFile: Record<
       string,
-      Array<{
+      {
         name: string;
         namePath: string;
         kind: string;
         startLine: number;
         endLine: number;
         bodyText: string;
-      }>
+      }[]
     > = {
       [path.join(tmpDir, 'auth.ts')]: [
         {
@@ -161,7 +161,7 @@ export function findUserByEmail(email: string) {
     const result = await indexer.indexFiles({
       filePaths: [path.join(tmpDir, 'auth.ts'), path.join(tmpDir, 'user.ts')],
       projectRoot: tmpDir,
-      getSymbols: async (filePath) => symbolsByFile[filePath] ?? [],
+      getSymbols: (filePath) => Promise.resolve(symbolsByFile[filePath] ?? []),
       db,
       provider,
     });
@@ -209,7 +209,7 @@ export function findUserByEmail(email: string) {
     const reResult = await indexer.indexFiles({
       filePaths: [path.join(tmpDir, 'auth.ts'), path.join(tmpDir, 'user.ts')],
       projectRoot: tmpDir,
-      getSymbols: async (filePath) => symbolsByFile[filePath] ?? [],
+      getSymbols: (filePath) => Promise.resolve(symbolsByFile[filePath] ?? []),
       db,
       provider,
     });
@@ -222,14 +222,14 @@ export function findUserByEmail(email: string) {
   it('handles kind filter in search', async () => {
     const symbolsByFile: Record<
       string,
-      Array<{
+      {
         name: string;
         namePath: string;
         kind: string;
         startLine: number;
         endLine: number;
         bodyText: string;
-      }>
+      }[]
     > = {
       [path.join(tmpDir, 'auth.ts')]: [
         {
@@ -255,7 +255,7 @@ export function findUserByEmail(email: string) {
     await indexer.indexFiles({
       filePaths: [path.join(tmpDir, 'auth.ts')],
       projectRoot: tmpDir,
-      getSymbols: async (filePath) => symbolsByFile[filePath] ?? [],
+      getSymbols: (filePath) => Promise.resolve(symbolsByFile[filePath] ?? []),
       db,
       provider,
     });
