@@ -70,6 +70,12 @@ import {
   PrepareForNewConversationTool,
   InitialInstructionsTool
 } from './tools/workflow_tools.js';
+import {
+  IndexSemanticSymbolsTool,
+  SemanticSearchTool,
+  FindSimilarCodeTool,
+  SemanticSearchStatsTool
+} from './tools/semantic_tools.js';
 const { logger: log, memoryHandler: defaultMemoryHandler } = createSmartEditLogger({
   name: 'smart-edit.agent',
   emitToConsole: true,
@@ -120,7 +126,11 @@ const DEFAULT_TOOL_CLASSES: ToolClass[] = [
   ThinkAboutWhetherYouAreDoneTool,
   SummarizeChangesTool,
   PrepareForNewConversationTool,
-  InitialInstructionsTool
+  InitialInstructionsTool,
+  IndexSemanticSymbolsTool,
+  SemanticSearchTool,
+  FindSimilarCodeTool,
+  SemanticSearchStatsTool
 ];
 
 export class ProjectNotFoundError extends Error {
