@@ -37,7 +37,12 @@ import { LanguageServerCodeEditor } from './code_editor.js';
 import { LanguageServerSymbolRetriever } from './symbol.js';
 import { Project } from './project.js';
 import { ExecuteShellCommandTool } from './tools/cmd_tools.js';
-import { ActivateProjectTool, GetCurrentConfigTool, RemoveProjectTool, SwitchModesTool } from './tools/config_tools.js';
+import {
+  ActivateProjectTool,
+  GetCurrentConfigTool,
+  RemoveProjectTool,
+  SwitchModesTool
+} from './tools/config_tools.js';
 import {
   ReadFileTool,
   CreateTextFileTool,
@@ -49,7 +54,12 @@ import {
   InsertAtLineTool,
   SearchForPatternTool
 } from './tools/file_tools.js';
-import { WriteMemoryTool, ReadMemoryTool, ListMemoriesTool, DeleteMemoryTool } from './tools/memory_tools.js';
+import {
+  WriteMemoryTool,
+  ReadMemoryTool,
+  ListMemoriesTool,
+  DeleteMemoryTool
+} from './tools/memory_tools.js';
 import {
   RestartLanguageServerTool,
   GetSymbolsOverviewTool,
@@ -234,7 +244,11 @@ class SerializedTaskExecutor {
   private queue: Promise<void> = Promise.resolve();
   private index = 1;
 
-  issue<T>(task: () => Promise<T> | T, metadata: IssueTaskMetadata | undefined, timeoutLabelLogger = log): AgentTaskHandle<T> {
+  issue<T>(
+    task: () => Promise<T> | T,
+    metadata: IssueTaskMetadata | undefined,
+    timeoutLabelLogger = log
+  ): AgentTaskHandle<T> {
     const taskName = `Task-${this.index++}[${metadata?.name ?? task.name ?? 'anonymous'}]`;
 
     let resolveFn: ((value: T) => void) | undefined;
@@ -274,6 +288,8 @@ class AgentTaskHandleImpl<T> implements AgentTaskHandle<T> {
   constructor(promise: Promise<T>, taskName: string) {
     this.promise = promise;
     this.taskName = taskName;
+    // Prevent unhandled rejection when the task result is never consumed
+    this.promise.catch(() => {});
   }
 
   async result(options: { timeout?: number } = {}): Promise<T> {
@@ -340,7 +356,8 @@ export class SmartEditAgent implements SmartEditAgentLike {
 
   constructor(options: SmartEditAgentOptions = {}) {
     this.smartEditConfig = options.smartEditConfig ?? SmartEditConfig.fromConfigFile();
-    this.memoryLogHandler = options.memoryLogHandler ?? defaultMemoryHandler ?? new MemoryLogHandler();
+    this.memoryLogHandler =
+      options.memoryLogHandler ?? defaultMemoryHandler ?? new MemoryLogHandler();
     this.projectActivationCallback = options.projectActivationCallback;
 
     this._context = options.context ?? SmartEditAgentContext.loadDefault();
@@ -351,11 +368,15 @@ export class SmartEditAgent implements SmartEditAgentLike {
     this.instantiateAllTools();
     this._baseToolSet = this.computeBaseToolSet(options.project ?? null);
     this._exposedTools = new AvailableTools(
-      Array.from(this._allTools.values()).filter((tool) => this._baseToolSet.includesName(tool.getName()))
+      Array.from(this._allTools.values()).filter((tool) =>
+        this._baseToolSet.includesName(tool.getName())
+      )
     );
 
     if (this.smartEditConfig.recordToolUsageStats) {
-      this._toolUsageStats = new ToolUsageStats(this.smartEditConfig.tokenCountEstimator ?? RegisteredTokenCountEstimator.TIKTOKEN_GPT4O);
+      this._toolUsageStats = new ToolUsageStats(
+        this.smartEditConfig.tokenCountEstimator ?? RegisteredTokenCountEstimator.TIKTOKEN_GPT4O
+      );
       log.info(
         `Will record tool usage statistics with token count estimator: ${this._toolUsageStats.tokenEstimatorName}.`
       );
@@ -384,7 +405,10 @@ export class SmartEditAgent implements SmartEditAgentLike {
         })
         .catch((error) => {
           this._dashboardApi = null;
-          log.warn('Failed to start Smart-Edit dashboard.', error instanceof Error ? error : undefined);
+          log.warn(
+            'Failed to start Smart-Edit dashboard.',
+            error instanceof Error ? error : undefined
+          );
         });
     }
 
@@ -421,7 +445,10 @@ export class SmartEditAgent implements SmartEditAgentLike {
 
     if (options.project) {
       this.activateProjectFromPathOrName(options.project).catch((error) => {
-        log.error(`Error activating project '${options.project}' at startup`, error instanceof Error ? error : undefined);
+        log.error(
+          `Error activating project '${options.project}' at startup`,
+          error instanceof Error ? error : undefined
+        );
       });
     }
   }
@@ -495,9 +522,10 @@ export class SmartEditAgent implements SmartEditAgentLike {
   }
 
   createSystemPrompt(): string {
-    log.info('Generating system prompt with available_tools=(see exposed tools), available_markers=%s', [
-      ...this._exposedTools.toolMarkerNames
-    ]);
+    log.info(
+      'Generating system prompt with available_tools=(see exposed tools), available_markers=%s',
+      [...this._exposedTools.toolMarkerNames]
+    );
     const systemPrompt = this.promptFactory.createSystemPrompt({
       contextSystemPrompt: this.formatPrompt(this._context.prompt),
       modeSystemPrompts: this._modes.map((mode) => this.formatPrompt(mode.prompt)),
@@ -532,12 +560,16 @@ export class SmartEditAgent implements SmartEditAgentLike {
         ? null
         : toolTimeout < 10
           ? (() => {
-              throw new Error(`Tool timeout must be at least 10 seconds, but is ${toolTimeout} seconds`);
+              throw new Error(
+                `Tool timeout must be at least 10 seconds, but is ${toolTimeout} seconds`
+              );
             })()
           : toolTimeout - 5;
 
     if (this.isLanguageServerRunning() && this.languageServer) {
-      log.info(`Stopping the current language server at ${this.languageServer.getRepositoryRootPath()} ...`);
+      log.info(
+        `Stopping the current language server at ${this.languageServer.getRepositoryRootPath()} ...`
+      );
       this.languageServer.stop();
       this.languageServer = null;
     }
@@ -574,9 +606,15 @@ export class SmartEditAgent implements SmartEditAgentLike {
     this.linesRead?.invalidateLinesRead(relativePath);
   }
 
-  recordToolUsageIfEnabled(input: Record<string, unknown>, toolResult: string | Record<string, unknown>, tool: Tool): void {
+  recordToolUsageIfEnabled(
+    input: Record<string, unknown>,
+    toolResult: string | Record<string, unknown>,
+    tool: Tool
+  ): void {
     if (!this._toolUsageStats) {
-      log.debug(`Tool usage statistics recording is disabled, not recording usage of '${tool.getName()}'.`);
+      log.debug(
+        `Tool usage statistics recording is disabled, not recording usage of '${tool.getName()}'.`
+      );
       return;
     }
     const inputStr = JSON.stringify(input);
@@ -589,7 +627,9 @@ export class SmartEditAgent implements SmartEditAgentLike {
     const lines: string[] = [];
     lines.push('Current configuration:');
     lines.push(`Smart-Edit version: ${smartEditVersion()}`);
-    lines.push(`Loglevel: ${this.smartEditConfig.logLevel}, trace_lsp_communication=${this.smartEditConfig.traceLspCommunication}`);
+    lines.push(
+      `Loglevel: ${this.smartEditConfig.logLevel}, trace_lsp_communication=${this.smartEditConfig.traceLspCommunication}`
+    );
     const project = this.getActiveProject();
     if (project) {
       lines.push(`Active project: ${resolveProjectName(project)}`);
@@ -602,7 +642,9 @@ export class SmartEditAgent implements SmartEditAgentLike {
     const activeModeNames = this.getActiveModes().map((mode) => mode.name);
     lines.push(`Active modes: ${activeModeNames.join(', ') || '(none)'}`);
 
-    const inactiveModes = SmartEditAgentMode.listRegisteredModeNames().filter((name) => !activeModeNames.includes(name));
+    const inactiveModes = SmartEditAgentMode.listRegisteredModeNames().filter(
+      (name) => !activeModeNames.includes(name)
+    );
     if (inactiveModes.length > 0) {
       lines.push(`Available but not active modes: ${inactiveModes.join(', ')}`);
     }
@@ -613,7 +655,9 @@ export class SmartEditAgent implements SmartEditAgentLike {
     const allToolNames = Array.from(this._allTools.values())
       .map((tool) => tool.getName())
       .sort();
-    const inactiveToolNames = allToolNames.filter((tool) => !this.getActiveToolNames().includes(tool));
+    const inactiveToolNames = allToolNames.filter(
+      (tool) => !this.getActiveToolNames().includes(tool)
+    );
     if (inactiveToolNames.length > 0) {
       lines.push('Available but not active tools:');
       lines.push(chunkedList(inactiveToolNames, 4));
@@ -641,7 +685,9 @@ export class SmartEditAgent implements SmartEditAgentLike {
 
   createLanguageServerSymbolRetriever(): LanguageServerSymbolRetriever {
     if (!this.isUsingLanguageServer() || !this.languageServer) {
-      throw new Error('Cannot create LanguageServerSymbolRetriever; agent is not using a language server.');
+      throw new Error(
+        'Cannot create LanguageServerSymbolRetriever; agent is not using a language server.'
+      );
     }
     return new LanguageServerSymbolRetriever(this.languageServer, this);
   }
@@ -696,7 +742,9 @@ export class SmartEditAgent implements SmartEditAgentLike {
     return ToolSet.default().apply(...definitions);
   }
 
-  private ideAssistantContextToolInclusionDefinitions(projectRootOrName: string | null): ToolInclusionDefinition[] {
+  private ideAssistantContextToolInclusionDefinitions(
+    projectRootOrName: string | null
+  ): ToolInclusionDefinition[] {
     const definitions: ToolInclusionDefinition[] = [];
     if (!projectRootOrName) {
       return definitions;
@@ -730,13 +778,20 @@ export class SmartEditAgent implements SmartEditAgentLike {
     this.projectActivationCallback?.();
   }
 
-  private loadProjectFromPathOrName(projectRootOrName: string, autogenerate: boolean): AgentProject | null {
+  private loadProjectFromPathOrName(
+    projectRootOrName: string,
+    autogenerate: boolean
+  ): AgentProject | null {
     const registered = this.resolveRegisteredProject(projectRootOrName);
     if (registered) {
       return materializeProject(registered);
     }
 
-    if (autogenerate && fs.existsSync(projectRootOrName) && fs.statSync(projectRootOrName).isDirectory()) {
+    if (
+      autogenerate &&
+      fs.existsSync(projectRootOrName) &&
+      fs.statSync(projectRootOrName).isDirectory()
+    ) {
       const newProject = this.smartEditConfig.addProjectFromPath(projectRootOrName);
       return materializeProject(newProject);
     }
@@ -745,7 +800,9 @@ export class SmartEditAgent implements SmartEditAgentLike {
   }
 
   private resolveRegisteredProject(projectRootOrName: string): RegisteredProject | null {
-    const byName = this.smartEditConfig.projects.filter((project) => project.projectName === projectRootOrName);
+    const byName = this.smartEditConfig.projects.filter(
+      (project) => project.projectName === projectRootOrName
+    );
     if (byName.length === 1) {
       return byName[0];
     }
@@ -773,7 +830,9 @@ export class SmartEditAgent implements SmartEditAgentLike {
     const comspec = process.env.COMSPEC ?? '';
     if (comspec.toLowerCase().includes('bash')) {
       process.env.COMSPEC = '';
-      log.info(`Adjusting COMSPEC environment variable to use the default shell instead of '${comspec}'`);
+      log.info(
+        `Adjusting COMSPEC environment variable to use the default shell instead of '${comspec}'`
+      );
     }
   }
 
@@ -787,7 +846,11 @@ export class SmartEditAgent implements SmartEditAgentLike {
   private openDashboard(url: string): void {
     try {
       if (process.platform === 'darwin') {
-        spawn('open', [url], ensureDefaultSubprocessOptions({ detached: true, stdio: 'ignore' })).unref();
+        spawn(
+          'open',
+          [url],
+          ensureDefaultSubprocessOptions({ detached: true, stdio: 'ignore' })
+        ).unref();
       } else if (process.platform === 'win32') {
         spawn(
           'cmd',
@@ -795,10 +858,17 @@ export class SmartEditAgent implements SmartEditAgentLike {
           ensureDefaultSubprocessOptions({ detached: true, stdio: 'ignore' })
         ).unref();
       } else {
-        spawn('xdg-open', [url], ensureDefaultSubprocessOptions({ detached: true, stdio: 'ignore' })).unref();
+        spawn(
+          'xdg-open',
+          [url],
+          ensureDefaultSubprocessOptions({ detached: true, stdio: 'ignore' })
+        ).unref();
       }
     } catch (error) {
-      log.warn(`Failed to open dashboard automatically. Please open ${url} manually.`, error as Error);
+      log.warn(
+        `Failed to open dashboard automatically. Please open ${url} manually.`,
+        error as Error
+      );
     }
   }
 
@@ -812,7 +882,9 @@ export class SmartEditAgent implements SmartEditAgentLike {
     }
 
     this._activeTools = new Map(
-      Array.from(this._allTools.entries()).filter(([, tool]) => toolSet.includesName(tool.getName()))
+      Array.from(this._allTools.entries()).filter(([, tool]) =>
+        toolSet.includesName(tool.getName())
+      )
     );
 
     log.info(`Active tools (${this._activeTools.size}): ${this.getActiveToolNames().join(', ')}`);
@@ -824,7 +896,10 @@ export class SmartEditAgent implements SmartEditAgentLike {
       available_tools: this._exposedTools.toolNames.join(', '),
       available_markers: Array.from(this._exposedTools.toolMarkerNames).join(', ')
     };
-    return template.replace(/{{\s*([a-zA-Z_]+)\s*}}/g, (_match, key: string) => replacements[key] ?? '');
+    return template.replace(
+      /{{\s*([a-zA-Z_]+)\s*}}/g,
+      (_match, key: string) => replacements[key] ?? ''
+    );
   }
 }
 
@@ -841,7 +916,10 @@ function materializeProject(registered: RegisteredProject): AgentProject {
   return project;
 }
 
-function ensureProjectHasLanguageServer(project: AgentProject, registered: RegisteredProject): AgentProject {
+function ensureProjectHasLanguageServer(
+  project: AgentProject,
+  registered: RegisteredProject
+): AgentProject {
   if (typeof project.createLanguageServer === 'function') {
     return project;
   }

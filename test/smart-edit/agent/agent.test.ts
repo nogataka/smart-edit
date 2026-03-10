@@ -11,7 +11,10 @@ import {
   RegisteredTokenCountEstimator,
   SmartEditConfig
 } from '../../../src/smart-edit/config/smart_edit_config.js';
-import { SmartEditAgentContext, SmartEditAgentMode } from '../../../src/smart-edit/config/context_mode.js';
+import {
+  SmartEditAgentContext,
+  SmartEditAgentMode
+} from '../../../src/smart-edit/config/context_mode.js';
 import { MemoryLogHandler } from '../../../src/smart-edit/util/logging.js';
 import { Language } from '../../../src/smart-lsp/ls_config.js';
 import { SmartLanguageServer } from '../../../src/smart-lsp/ls.js';
@@ -61,7 +64,7 @@ function createAgent(options: CreateAgentOptions = {}) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'smart-edit-agent-test-'));
   const configInit = new ProjectConfig({
     projectName: 'demo',
-    language: Language.PYTHON,
+    language: Language.TYPESCRIPT,
     ignoredPaths: [],
     excludedTools: [],
     includedOptionalTools: [],
@@ -79,7 +82,8 @@ function createAgent(options: CreateAgentOptions = {}) {
     recordToolUsageStats: true,
     tokenCountEstimator: RegisteredTokenCountEstimator.TIKTOKEN_GPT4O,
     logLevel: 20,
-    traceLspCommunication: false
+    traceLspCommunication: false,
+    toolTimeout: 10
   });
 
   const context = new SmartEditAgentContext({
@@ -134,7 +138,9 @@ describe('SmartEditAgent', () => {
 
     expect(agent.getExposedToolInstances().length).toBeGreaterThan(0);
     const prompt = agent.createSystemPrompt();
-    expect(prompt).toContain('You are a professional coding agent concerned with one particular codebase.');
+    expect(prompt).toContain(
+      'You are a professional coding agent concerned with one particular codebase.'
+    );
     expect(prompt).toContain('Context description:');
 
     agent.dispose();
