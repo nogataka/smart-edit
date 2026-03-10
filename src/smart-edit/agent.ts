@@ -289,6 +289,7 @@ class AgentTaskHandleImpl<T> implements AgentTaskHandle<T> {
     this.promise = promise;
     this.taskName = taskName;
     // Prevent unhandled rejection when the task result is never consumed
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     this.promise.catch(() => {});
   }
 
