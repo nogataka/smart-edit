@@ -73,7 +73,11 @@ function currentPlatformId(): PlatformId {
   return determinePlatformId();
 }
 
-function normalizeCommand(command: string | string[]): { cmd: string; args: string[]; shell: boolean } {
+function normalizeCommand(command: string | string[]): {
+  cmd: string;
+  args: string[];
+  shell: boolean;
+} {
   if (Array.isArray(command)) {
     const [cmd, ...args] = command;
     if (!cmd) {
@@ -84,7 +88,11 @@ function normalizeCommand(command: string | string[]): { cmd: string; args: stri
   return { cmd: command, args: [], shell: true };
 }
 
-export type CommandRunner = (command: string, args: string[], options: SpawnSyncOptions) => SpawnSyncReturns<string | Buffer>;
+export type CommandRunner = (
+  command: string,
+  args: string[],
+  options: SpawnSyncOptions
+) => SpawnSyncReturns<string | Buffer>;
 
 export class RuntimeDependencyCollection {
   private readonly byKey: Map<string, RuntimeDependency> = new Map<string, RuntimeDependency>();
@@ -98,7 +106,9 @@ export class RuntimeDependencyCollection {
     for (const dep of dependencies) {
       const key = this.makeKey(dep.id, dep.platformId ?? null);
       if (this.byKey.has(key)) {
-        throw new Error(`Duplicate runtime dependency: id=${dep.id}, platform=${dep.platformId ?? 'default'}`);
+        throw new Error(
+          `Duplicate runtime dependency: id=${dep.id}, platform=${dep.platformId ?? 'default'}`
+        );
       }
       this.byKey.set(key, dep);
     }
@@ -125,7 +135,12 @@ export class RuntimeDependencyCollection {
   getDependenciesForPlatform(platformId: PlatformId): RuntimeDependency[] {
     return Array.from(this.byKey.values()).filter((dep) => {
       const target = dep.platformId ?? null;
-      return target === null || target === 'any' || target === 'platform-agnostic' || target === platformId;
+      return (
+        target === null ||
+        target === 'any' ||
+        target === 'platform-agnostic' ||
+        target === platformId
+      );
     });
   }
 
@@ -182,16 +197,20 @@ export class RuntimeDependencyCollection {
     const options: SpawnSyncOptions = ensureDefaultSubprocessOptions({
       cwd,
       shell,
-      stdio: 'inherit'
+      stdio: 'pipe'
     });
 
-    logger.info(`Installing dependency ${dep.id} via ${Array.isArray(command) ? command.join(' ') : command}`);
+    logger.info(
+      `Installing dependency ${dep.id} via ${Array.isArray(command) ? command.join(' ') : command}`
+    );
     const result = this.commandRunner(cmd, args, options);
     if (result.error) {
       throw result.error;
     }
     if (result.status !== 0) {
-      throw new Error(`Command for dependency ${dep.id} exited with status ${result.status ?? 'unknown'}.`);
+      throw new Error(
+        `Command for dependency ${dep.id} exited with status ${result.status ?? 'unknown'}.`
+      );
     }
   }
 
@@ -218,7 +237,11 @@ export class RuntimeDependencyCollection {
     }
   }
 
-  private downloadArchive(dep: RuntimeDependency, destination: string, logger: SmartEditLogger): void {
+  private downloadArchive(
+    dep: RuntimeDependency,
+    destination: string,
+    logger: SmartEditLogger
+  ): void {
     logger.info(`Downloading runtime dependency ${dep.id} from ${dep.url}`);
     fs.mkdirSync(path.dirname(destination), { recursive: true });
 
@@ -262,7 +285,12 @@ export class RuntimeDependencyCollection {
     );
   }
 
-  private extractArchive(dep: RuntimeDependency, archivePath: string, targetDir: string, logger: SmartEditLogger): void {
+  private extractArchive(
+    dep: RuntimeDependency,
+    archivePath: string,
+    targetDir: string,
+    logger: SmartEditLogger
+  ): void {
     const archiveType = normalizeArchiveType(dep.archiveType, archivePath);
     fs.mkdirSync(targetDir, { recursive: true });
 
@@ -325,7 +353,10 @@ function inferFilenameFromUrl(dep: RuntimeDependency): string {
   return `${dep.id}.download`;
 }
 
-function normalizeArchiveType(rawType: string | null | undefined, archivePath: string): 'gz' | 'zip' | 'tar' | 'zip.gz' | null {
+function normalizeArchiveType(
+  rawType: string | null | undefined,
+  archivePath: string
+): 'gz' | 'zip' | 'tar' | 'zip.gz' | null {
   if (rawType) {
     const lowered = rawType.toLowerCase();
     if (['zip', 'vsix', 'nupkg'].includes(lowered)) {
@@ -337,7 +368,9 @@ function normalizeArchiveType(rawType: string | null | undefined, archivePath: s
     if (['zip.gz'].includes(lowered)) {
       return 'zip.gz';
     }
-    if (['tar', 'gztar', 'bztar', 'xztar', 'tar.gz', 'tar.bz2', 'tar.xz', 'tgz'].includes(lowered)) {
+    if (
+      ['tar', 'gztar', 'bztar', 'xztar', 'tar.gz', 'tar.bz2', 'tar.xz', 'tgz'].includes(lowered)
+    ) {
       return 'tar';
     }
   }
@@ -346,7 +379,13 @@ function normalizeArchiveType(rawType: string | null | undefined, archivePath: s
   if (loweredPath.endsWith('.zip')) {
     return 'zip';
   }
-  if (loweredPath.endsWith('.tar.gz') || loweredPath.endsWith('.tgz') || loweredPath.endsWith('.tar.bz2') || loweredPath.endsWith('.tar.xz') || loweredPath.endsWith('.tar')) {
+  if (
+    loweredPath.endsWith('.tar.gz') ||
+    loweredPath.endsWith('.tgz') ||
+    loweredPath.endsWith('.tar.bz2') ||
+    loweredPath.endsWith('.tar.xz') ||
+    loweredPath.endsWith('.tar')
+  ) {
     return 'tar';
   }
   if (loweredPath.endsWith('.zip.gz')) {
@@ -380,20 +419,30 @@ function extractTarArchive(archivePath: string, targetDir: string, logger: Smart
   try {
     tar.x({ file: archivePath, cwd: targetDir, sync: true, strict: true });
   } catch (error) {
-    logger.warn(`tar.x failed for ${archivePath}: ${String(error)}. Falling back to system tar command.`);
+    logger.warn(
+      `tar.x failed for ${archivePath}: ${String(error)}. Falling back to system tar command.`
+    );
     const result = spawnSync(
       'tar',
       ['-xf', archivePath, '-C', targetDir],
       ensureDefaultSubprocessOptions({ stdio: 'inherit' })
     );
     if (result.error || result.status !== 0) {
-      throw new Error(`Failed to extract TAR archive ${archivePath}: ${result.error ?? `exit code ${result.status}`}`);
+      throw new Error(
+        `Failed to extract TAR archive ${archivePath}: ${result.error ?? `exit code ${result.status}`}`
+      );
     }
   }
 }
 
-function copyFileToTarget(sourcePath: string, targetDir: string, binaryName: string | null | undefined): void {
-  const destination = binaryName ? path.join(targetDir, binaryName) : path.join(targetDir, path.basename(sourcePath));
+function copyFileToTarget(
+  sourcePath: string,
+  targetDir: string,
+  binaryName: string | null | undefined
+): void {
+  const destination = binaryName
+    ? path.join(targetDir, binaryName)
+    : path.join(targetDir, path.basename(sourcePath));
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.copyFileSync(sourcePath, destination);
   trySetExecutable(destination);

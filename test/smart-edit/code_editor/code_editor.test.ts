@@ -4,16 +4,16 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  LanguageServerCodeEditor
-} from '../../../src/smart-edit/code_editor.js';
+import { LanguageServerCodeEditor } from '../../../src/smart-edit/code_editor.js';
 import {
   LanguageServerSymbolRetriever,
   SymbolKind,
   PositionInFile
 } from '../../../src/smart-edit/symbol.js';
+import { pathToFileURL } from 'node:url';
 import {
   SmartLanguageServer,
+  type LspLocation,
   type SmartLanguageServerHandler,
   type SmartLanguageServerNotifications,
   type SmartLanguageServerRequests,
@@ -36,7 +36,7 @@ class FakeLanguageServerHandler implements SmartLanguageServerHandler {
 
   constructor(
     private readonly symbolTree: UnifiedSymbolInformation[],
-    private readonly references: ReferenceInSymbol[]
+    private readonly lspLocations: LspLocation[]
   ) {}
 
   setRequestTimeout(timeout: number | null): void {
@@ -60,6 +60,12 @@ class FakeLanguageServerHandler implements SmartLanguageServerHandler {
   }
 
   readonly notify: SmartLanguageServerNotifications = {
+    initialized: (params) => {
+      void params;
+    },
+    exit: () => {
+      // no-op
+    },
     didOpenTextDocument: (params) => {
       void params;
     },
@@ -84,18 +90,17 @@ class FakeLanguageServerHandler implements SmartLanguageServerHandler {
         outlineSymbols: this.symbolTree.map((root) => deepClone(root))
       };
     },
-    fullSymbolTree: () => this.symbolTree.map((root) => deepClone(root)),
-    referencingSymbols: () => this.references.map((reference) => deepClone(reference)),
-    overview: (relativePath: string) => ({
-      [relativePath]: this.symbolTree
-        .flatMap((root) => root.children ?? [])
-        .map((symbol) => deepClone(symbol))
-    })
+    references: () => this.lspLocations.map((loc) => deepClone(loc)),
+    shutdown: () => undefined
   };
 }
 
 class FakeLanguageServer extends SmartLanguageServer {
-  constructor(repositoryRootPath: string, symbolTree: UnifiedSymbolInformation[], references: ReferenceInSymbol[]) {
+  constructor(
+    repositoryRootPath: string,
+    symbolTree: UnifiedSymbolInformation[],
+    lspLocations: LspLocation[]
+  ) {
     super(
       {
         codeLanguage: Language.TYPESCRIPT,
@@ -104,7 +109,7 @@ class FakeLanguageServer extends SmartLanguageServer {
       { level: 'debug' },
       repositoryRootPath,
       {
-        handler: new FakeLanguageServerHandler(symbolTree, references)
+        handler: new FakeLanguageServerHandler(symbolTree, lspLocations)
       }
     );
     this.start();
@@ -169,15 +174,16 @@ describe('LanguageServerCodeEditor', () => {
     await fs.writeFile(absoluteFile, initialContent, 'utf-8');
 
     const symbolTree = createSampleSymbols(relativePath);
-    const [fileSymbol] = symbolTree;
-    const references: ReferenceInSymbol[] = [
+    const lspLocations: LspLocation[] = [
       {
-        symbol: deepClone(fileSymbol),
-        line: 2,
-        character: 5
+        uri: pathToFileURL(absoluteFile).href,
+        range: {
+          start: { line: 2, character: 5 },
+          end: { line: 2, character: 10 }
+        }
       }
     ];
-    const languageServer = new FakeLanguageServer(tempDir, symbolTree, references);
+    const languageServer = new FakeLanguageServer(tempDir, symbolTree, lspLocations);
     retriever = new LanguageServerSymbolRetriever(languageServer, null);
     editor = new LanguageServerCodeEditor(retriever, null);
   });
@@ -240,7 +246,14 @@ describe('LanguageServerCodeEditor', () => {
   });
 
   it('retrieves referencing symbols via the retriever', () => {
-    const symbols = retriever.find_by_name('demo_function', false, undefined, undefined, false, relativePath);
+    const symbols = retriever.find_by_name(
+      'demo_function',
+      false,
+      undefined,
+      undefined,
+      false,
+      relativePath
+    );
     expect(symbols).toHaveLength(1);
     const symbol = symbols[0];
     expect(symbol).toBeDefined();

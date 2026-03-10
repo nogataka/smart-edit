@@ -4,13 +4,11 @@ import type {
   DidOpenTextDocumentParams,
   DocumentSymbolResult,
   DocumentSymbolsOptions,
-  FullSymbolTreeOptions,
-  ReferenceInSymbol,
-  ReferencingSymbolsOptions,
+  LspLocation,
+  ReferenceParams,
   SmartLanguageServerHandler,
   SmartLanguageServerNotifications,
-  SmartLanguageServerRequests,
-  UnifiedSymbolInformation
+  SmartLanguageServerRequests
 } from './ls.js';
 
 export interface DocumentSymbolRequestParams {
@@ -30,19 +28,14 @@ export class LanguageServerRequest implements SmartLanguageServerRequests {
   }
 
   documentSymbol(params: DocumentSymbolRequestParams): DocumentSymbolResult | null {
-    return this.delegate.sendRequest('textDocument/documentSymbol', params) as DocumentSymbolResult | null;
+    return this.delegate.sendRequest(
+      'textDocument/documentSymbol',
+      params
+    ) as DocumentSymbolResult | null;
   }
 
-  fullSymbolTree(params: FullSymbolTreeOptions): UnifiedSymbolInformation[] | null {
-    return this.delegate.sendRequest('smart-edit/fullSymbolTree', params) as UnifiedSymbolInformation[] | null;
-  }
-
-  referencingSymbols(params: ReferencingSymbolsOptions): ReferenceInSymbol[] | null {
-    return this.delegate.sendRequest('smart-edit/referencingSymbols', params) as ReferenceInSymbol[] | null;
-  }
-
-  overview(relativeFilePath: string): Record<string, UnifiedSymbolInformation[]> | null {
-    return this.delegate.sendRequest('smart-edit/overview', relativeFilePath) as Record<string, UnifiedSymbolInformation[]> | null;
+  references(params: ReferenceParams): LspLocation[] | null {
+    return this.delegate.sendRequest('textDocument/references', params) as LspLocation[] | null;
   }
 
   shutdown(): void {

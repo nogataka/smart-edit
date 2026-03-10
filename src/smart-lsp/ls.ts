@@ -1,12 +1,16 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import ignore from 'ignore';
 
 import { MatchedConsecutiveLines } from '../smart-edit/text_utils.js';
-import { createSmartEditLogger, type LogLevel, type SmartEditLogger } from '../smart-edit/util/logging.js';
+import {
+  createSmartEditLogger,
+  type LogLevel,
+  type SmartEditLogger
+} from '../smart-edit/util/logging.js';
 import { matchPath, type PathMatcher } from '../smart-edit/util/file_system.js';
 import type { FilenameMatcherLike, Language } from './ls_config.js';
 import { getLanguageFilenameMatcher } from './ls_config.js';
@@ -37,7 +41,8 @@ export class SmartLspSettings {
   readonly lsSpecificSettings: Record<string, unknown>;
 
   constructor(init: SmartLspSettingsInit = {}) {
-    this.smartLspDir = init.smartLspDir ?? path.join(path.resolve(process.env.HOME ?? '.'), '.smart-lsp');
+    this.smartLspDir =
+      init.smartLspDir ?? path.join(path.resolve(process.env.HOME ?? '.'), '.smart-lsp');
     this.projectDataRelativePath = init.projectDataRelativePath ?? '.smart-lsp';
     this.lsSpecificSettings = { ...(init.lsSpecificSettings ?? {}) };
 
@@ -52,7 +57,12 @@ export class SmartLspSettings {
 
 type LoggerLevelName = LogLevel | 'debug';
 
-function logWithLevel(logger: SmartEditLogger, level: LoggerLevelName, message: string, meta?: unknown): void {
+function logWithLevel(
+  logger: SmartEditLogger,
+  level: LoggerLevelName,
+  message: string,
+  meta?: unknown
+): void {
   switch (level) {
     case 'trace':
       logger.trace(message, meta);
@@ -105,6 +115,17 @@ export function coerceLogLevel(value: LogLevel | number | undefined): LogLevel {
 export interface LspRange {
   start?: { line?: number; character?: number | null } | null;
   end?: { line?: number; character?: number | null } | null;
+}
+
+export interface LspLocation {
+  uri: string;
+  range: LspRange;
+}
+
+export interface ReferenceParams {
+  textDocument: { uri: string };
+  position: { line: number; character: number };
+  context: { includeDeclaration: boolean };
 }
 
 export interface UnifiedSymbolInformation {
@@ -189,10 +210,11 @@ export interface SmartLanguageServerNotifications {
 }
 
 export interface SmartLanguageServerRequests {
-  documentSymbol(params: { textDocument: { uri: string }; options?: DocumentSymbolsOptions }): DocumentSymbolResult | null;
-  fullSymbolTree(params: FullSymbolTreeOptions): UnifiedSymbolInformation[] | null;
-  referencingSymbols(options: ReferencingSymbolsOptions): ReferenceInSymbol[] | null;
-  overview(relativeFilePath: string): Record<string, UnifiedSymbolInformation[]> | null;
+  documentSymbol(params: {
+    textDocument: { uri: string };
+    options?: DocumentSymbolsOptions;
+  }): DocumentSymbolResult | null;
+  references(params: ReferenceParams): LspLocation[] | null;
   shutdown(): void;
 }
 
@@ -256,9 +278,7 @@ class NullLanguageServerHandler implements SmartLanguageServerHandler {
 
   readonly send: SmartLanguageServerRequests = {
     documentSymbol: () => null,
-    fullSymbolTree: () => null,
-    referencingSymbols: () => null,
-    overview: () => ({}),
+    references: () => null,
     shutdown: () => undefined
   };
 }
@@ -276,7 +296,13 @@ class LspFileBuffer {
   refCount: number;
   contentHash: string;
 
-  constructor(init: { uri: string; contents: string; version: number; languageId: string; refCount: number }) {
+  constructor(init: {
+    uri: string;
+    contents: string;
+    version: number;
+    languageId: string;
+    refCount: number;
+  }) {
     this.uri = init.uri;
     this.contents = init.contents;
     this.version = init.version;
@@ -333,7 +359,12 @@ function getIndexFromLineCol(text: string, line: number, col: number): number {
   throw new RangeError(`Position (${line}, ${col}) is out of bounds.`);
 }
 
-function insertTextAtPosition(text: string, line: number, col: number, snippet: string): {
+function insertTextAtPosition(
+  text: string,
+  line: number,
+  col: number,
+  snippet: string
+): {
   contents: string;
   line: number;
   column: number;
@@ -400,7 +431,9 @@ export class SmartLanguageServer {
     this.language = config.codeLanguage;
     this.languageMatcher = getLanguageFilenameMatcher(this.language);
 
-    const ignoredPatterns = Array.from(new Set(config.ignoredPaths ?? [])).map((pattern) => pattern.replace(/\\/g, '/'));
+    const ignoredPatterns = Array.from(new Set(config.ignoredPaths ?? [])).map((pattern) =>
+      pattern.replace(/\\/g, '/')
+    );
     const ignoreInstance = ignore();
     if (ignoredPatterns.length > 0) {
       ignoreInstance.add(ignoredPatterns);
@@ -443,7 +476,11 @@ export class SmartLanguageServer {
     if (this.serverStarted) {
       return this;
     }
-    logWithLevel(this.logger, 'info', `Starting SmartLanguageServer for ${this.repositoryRootPath}`);
+    logWithLevel(
+      this.logger,
+      'info',
+      `Starting SmartLanguageServer for ${this.repositoryRootPath}`
+    );
     this.handler.start();
     this.serverStarted = true;
     return this;
@@ -454,7 +491,11 @@ export class SmartLanguageServer {
       return;
     }
 
-    logWithLevel(this.logger, 'debug', `Stopping SmartLanguageServer (timeout=${shutdownTimeout}s)`);
+    logWithLevel(
+      this.logger,
+      'debug',
+      `Stopping SmartLanguageServer (timeout=${shutdownTimeout}s)`
+    );
 
     for (const buffer of this.openFileBuffers.values()) {
       this.handler.notify.didCloseTextDocument({
@@ -507,7 +548,10 @@ export class SmartLanguageServer {
     this.cacheHasChanged = false;
   }
 
-  requestDocumentSymbols(relativePath: string, options: DocumentSymbolsOptions = {}): DocumentSymbolResult {
+  requestDocumentSymbols(
+    relativePath: string,
+    options: DocumentSymbolsOptions = {}
+  ): DocumentSymbolResult {
     this.ensureServerRunning('requestDocumentSymbols');
 
     return this.withOpenFile(relativePath, (buffer) => {
@@ -524,10 +568,9 @@ export class SmartLanguageServer {
         options
       });
 
-      const result: DocumentSymbolResult = response ?? {
-        documentSymbols: [],
-        outlineSymbols: []
-      };
+      // Standard LSP returns DocumentSymbol[] directly, while custom servers
+      // may return DocumentSymbolResult { documentSymbols, outlineSymbols }.
+      const result: DocumentSymbolResult = normalizeDocumentSymbolResponse(response);
 
       this.documentSymbolsCache.set(relativePath, {
         hash: buffer.contentHash,
@@ -544,24 +587,299 @@ export class SmartLanguageServer {
 
   requestFullSymbolTree(options: FullSymbolTreeOptions = {}): UnifiedSymbolInformation[] {
     this.ensureServerRunning('requestFullSymbolTree');
-    const response = this.handler.send.fullSymbolTree(options);
-    return response ? cloneSymbols(response) : [];
+    const relativePath = options.withinRelativePath ?? '';
+
+    if (relativePath) {
+      const absolutePath = path.resolve(
+        this.repositoryRootPath,
+        normalizeRelativePath(relativePath)
+      );
+      if (fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()) {
+        const result = this.requestDocumentSymbols(relativePath, {
+          includeBody: options.includeBody
+        });
+        return cloneSymbols(result.documentSymbols);
+      }
+    }
+
+    return this.buildSymbolTree(relativePath || '', options.includeBody ?? false);
   }
 
   requestReferencingSymbols(options: ReferencingSymbolsOptions): ReferenceInSymbol[] {
     this.ensureServerRunning('requestReferencingSymbols');
-    const response = this.handler.send.referencingSymbols(options);
-    return response ? response.map((entry) => ({ ...entry, symbol: cloneSymbol(entry.symbol) })) : [];
+
+    const locations = this.requestReferences(
+      options.relativeFilePath,
+      options.line,
+      options.column
+    );
+    const results: ReferenceInSymbol[] = [];
+
+    for (const loc of locations) {
+      const refLine = loc.range.start?.line ?? 0;
+      const refChar = loc.range.start?.character ?? 0;
+      let refRelPath: string;
+      try {
+        const absPath = fileURLToPath(loc.uri);
+        refRelPath = path.relative(this.repositoryRootPath, absPath);
+      } catch {
+        continue;
+      }
+
+      // Filter self-references
+      if (
+        !options.includeSelf &&
+        refRelPath === options.relativeFilePath &&
+        refLine === options.line &&
+        refChar === options.column
+      ) {
+        continue;
+      }
+
+      const containingSymbol = this.findContainingSymbol(refRelPath, refLine, refChar);
+      if (!containingSymbol) {
+        if (!options.includeFileSymbols) {
+          continue;
+        }
+        results.push({
+          symbol: this.createFileSymbol(refRelPath),
+          line: refLine,
+          character: refChar
+        });
+        continue;
+      }
+
+      // Filter imports (kind 2 = Module in LSP SymbolKind)
+      if (!options.includeImports && containingSymbol.kind === 2) {
+        continue;
+      }
+
+      if (options.includeBody) {
+        // Body is already populated by findContainingSymbol
+      }
+
+      results.push({
+        symbol: cloneSymbol(containingSymbol),
+        line: refLine,
+        character: refChar
+      });
+    }
+
+    return results;
   }
 
   requestOverview(relativePath: string): Record<string, UnifiedSymbolInformation[]> {
     this.ensureServerRunning('requestOverview');
-    const response = this.handler.send.overview(relativePath) ?? {};
-    const clone: Record<string, UnifiedSymbolInformation[]> = {};
-    for (const [key, symbols] of Object.entries(response)) {
-      clone[key] = cloneSymbols(symbols);
+    const normalized = normalizeRelativePath(relativePath);
+    const absolutePath = path.resolve(this.repositoryRootPath, normalized);
+
+    if (fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()) {
+      const result = this.requestDocumentSymbols(normalized);
+      return { [normalized]: cloneSymbols(result.documentSymbols) };
     }
-    return clone;
+
+    // Directory: list source files and get symbols for each
+    const files = this.listSourceFiles(normalized);
+    const overview: Record<string, UnifiedSymbolInformation[]> = {};
+    for (const file of files) {
+      try {
+        const result = this.requestDocumentSymbols(file);
+        overview[file] = cloneSymbols(result.documentSymbols);
+      } catch {
+        // Skip files that fail to parse
+      }
+    }
+    return overview;
+  }
+
+  // --- Helper methods for client-side LSP processing ---
+
+  private requestReferences(relativeFilePath: string, line: number, column: number): LspLocation[] {
+    const normalized = normalizeRelativePath(relativeFilePath);
+    const absolutePath = path.resolve(this.repositoryRootPath, normalized);
+    const uri = pathToFileURL(absolutePath).href;
+
+    const buffer = this.acquireFileBuffer(normalized);
+    try {
+      const response = this.handler.send.references({
+        textDocument: { uri },
+        position: { line, character: column },
+        context: { includeDeclaration: true }
+      });
+
+      if (!response) {
+        return [];
+      }
+
+      // Filter out locations outside repository and ignored paths
+      return response.filter((loc) => {
+        try {
+          const locAbsPath = fileURLToPath(loc.uri);
+          const locRelPath = path.relative(this.repositoryRootPath, locAbsPath);
+          if (locRelPath.startsWith('..')) {
+            return false;
+          }
+          return !matchPath(locRelPath, this.ignoreMatcher, this.repositoryRootPath);
+        } catch {
+          return false;
+        }
+      });
+    } finally {
+      this.releaseFileBuffer(buffer.uri);
+    }
+  }
+
+  private listSourceFiles(relativeDirPath: string): string[] {
+    const absoluteDir = relativeDirPath
+      ? path.resolve(this.repositoryRootPath, normalizeRelativePath(relativeDirPath))
+      : this.repositoryRootPath;
+
+    if (!fs.existsSync(absoluteDir) || !fs.statSync(absoluteDir).isDirectory()) {
+      return [];
+    }
+
+    const results: string[] = [];
+    const walk = (dir: string): void => {
+      let entries: fs.Dirent[];
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const relPath = path.relative(this.repositoryRootPath, fullPath);
+
+        if (matchPath(relPath, this.ignoreMatcher, this.repositoryRootPath)) {
+          continue;
+        }
+
+        if (entry.isDirectory()) {
+          walk(fullPath);
+        } else if (entry.isFile() && this.languageMatcher.isRelevantFilename(entry.name)) {
+          results.push(relPath);
+        }
+      }
+    };
+
+    walk(absoluteDir);
+    return results;
+  }
+
+  private buildSymbolTree(relDirPath: string, includeBody: boolean): UnifiedSymbolInformation[] {
+    const absoluteDir = relDirPath
+      ? path.resolve(this.repositoryRootPath, normalizeRelativePath(relDirPath))
+      : this.repositoryRootPath;
+
+    if (!fs.existsSync(absoluteDir) || !fs.statSync(absoluteDir).isDirectory()) {
+      return [];
+    }
+
+    const buildDir = (dir: string): UnifiedSymbolInformation[] => {
+      let entries: fs.Dirent[];
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return [];
+      }
+
+      const symbols: UnifiedSymbolInformation[] = [];
+
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const relPath = path.relative(this.repositoryRootPath, fullPath);
+
+        if (matchPath(relPath, this.ignoreMatcher, this.repositoryRootPath)) {
+          continue;
+        }
+
+        if (entry.isDirectory()) {
+          const children = buildDir(fullPath);
+          if (children.length > 0) {
+            symbols.push({
+              name: entry.name,
+              kind: 4, // Package
+              children,
+              location: { relativePath: relPath }
+            });
+          }
+        } else if (entry.isFile() && this.languageMatcher.isRelevantFilename(entry.name)) {
+          try {
+            const result = this.requestDocumentSymbols(relPath, { includeBody });
+            symbols.push({
+              name: entry.name,
+              kind: 1, // File
+              children: cloneSymbols(result.documentSymbols),
+              location: { relativePath: relPath }
+            });
+          } catch {
+            // Skip files that fail
+          }
+        }
+      }
+
+      return symbols;
+    };
+
+    return buildDir(absoluteDir);
+  }
+
+  private findContainingSymbol(
+    relativeFilePath: string,
+    line: number,
+    column: number
+  ): UnifiedSymbolInformation | null {
+    let result: DocumentSymbolResult;
+    try {
+      result = this.requestDocumentSymbols(relativeFilePath, { includeBody: true });
+    } catch {
+      return null;
+    }
+
+    const findDeepest = (
+      symbols: UnifiedSymbolInformation[],
+      targetLine: number,
+      targetCol: number
+    ): UnifiedSymbolInformation | null => {
+      for (const sym of symbols) {
+        const range = sym.range ?? sym.selectionRange;
+        if (!range?.start || !range?.end) {
+          continue;
+        }
+
+        const startLine = range.start.line ?? 0;
+        const startChar = range.start.character ?? 0;
+        const endLine = range.end.line ?? 0;
+        const endChar = range.end.character ?? 0;
+
+        const afterStart =
+          targetLine > startLine || (targetLine === startLine && targetCol >= startChar);
+        const beforeEnd = targetLine < endLine || (targetLine === endLine && targetCol <= endChar);
+
+        if (afterStart && beforeEnd) {
+          sym.location = { relativePath: relativeFilePath, range };
+          if (sym.children && sym.children.length > 0) {
+            const deeper = findDeepest(sym.children, targetLine, targetCol);
+            if (deeper) {
+              return deeper;
+            }
+          }
+          return sym;
+        }
+      }
+      return null;
+    };
+
+    return findDeepest(result.documentSymbols, line, column);
+  }
+
+  private createFileSymbol(relativeFilePath: string): UnifiedSymbolInformation {
+    return {
+      name: path.basename(relativeFilePath),
+      kind: 1, // File
+      location: { relativePath: relativeFilePath }
+    };
   }
 
   retrieveFullFileContent(relativePath: string): string {
@@ -584,7 +902,12 @@ export class SmartLanguageServer {
     });
   }
 
-  insertTextAtPosition(relativePath: string, line: number, column: number, text: string): {
+  insertTextAtPosition(
+    relativePath: string,
+    line: number,
+    column: number,
+    text: string
+  ): {
     line: number;
     column: number;
   } {
@@ -686,7 +1009,13 @@ export class SmartLanguageServer {
     }
 
     const contents = fs.readFileSync(absolutePath, { encoding: 'utf-8' });
-    const buffer = new LspFileBuffer({ uri, contents, version: 0, languageId: this.language, refCount: 1 });
+    const buffer = new LspFileBuffer({
+      uri,
+      contents,
+      version: 0,
+      languageId: this.language,
+      refCount: 1
+    });
     this.openFileBuffers.set(uri, buffer);
 
     this.handler.notify.didOpenTextDocument({
@@ -752,7 +1081,10 @@ export class SmartLanguageServer {
 
 const LANGUAGE_SERVER_REGISTRY = new Map<Language, SmartLanguageServerConstructor>();
 
-export function registerLanguageServer(language: Language, ctor: SmartLanguageServerConstructor): void {
+export function registerLanguageServer(
+  language: Language,
+  ctor: SmartLanguageServerConstructor
+): void {
   LANGUAGE_SERVER_REGISTRY.set(language, ctor);
 }
 
@@ -761,7 +1093,7 @@ function getLanguageServerConstructor(language: Language): SmartLanguageServerCo
 }
 
 function deepClone<T>(value: T): T {
-  return value === undefined ? value : JSON.parse(JSON.stringify(value)) as T;
+  return value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T);
 }
 
 function cloneSymbol(symbol: UnifiedSymbolInformation): UnifiedSymbolInformation {
@@ -776,4 +1108,24 @@ function cloneSymbol(symbol: UnifiedSymbolInformation): UnifiedSymbolInformation
 
 function cloneSymbols(symbols: UnifiedSymbolInformation[]): UnifiedSymbolInformation[] {
   return symbols.map((symbol) => cloneSymbol(symbol));
+}
+
+/**
+ * Normalize the response from textDocument/documentSymbol.
+ * Standard LSP servers return DocumentSymbol[] directly, while custom servers
+ * may return DocumentSymbolResult { documentSymbols, outlineSymbols }.
+ */
+function normalizeDocumentSymbolResponse(
+  response: DocumentSymbolResult | UnifiedSymbolInformation[] | null | undefined
+): DocumentSymbolResult {
+  if (!response) {
+    return { documentSymbols: [], outlineSymbols: [] };
+  }
+  if (Array.isArray(response)) {
+    return { documentSymbols: response, outlineSymbols: response };
+  }
+  return {
+    documentSymbols: response.documentSymbols ?? [],
+    outlineSymbols: response.outlineSymbols ?? []
+  };
 }

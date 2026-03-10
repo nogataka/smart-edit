@@ -14,10 +14,15 @@ import {
 } from './config/smart_edit_config.js';
 import { SMART_EDIT_MANAGED_DIR_IN_HOME, SMART_EDIT_MANAGED_DIR_NAME } from './constants.js';
 import { SmartLanguageServer } from '../smart-lsp/ls.js';
+import '../smart-lsp/language_servers/autoload.js';
 import { getLanguageFilenameMatcher } from '../smart-lsp/ls_config.js';
 import type { FilenameMatcherLike, Language } from '../smart-lsp/ls_config.js';
 
-const { logger: log } = createSmartEditLogger({ name: 'smart-edit.project', emitToConsole: true, level: 'info' });
+const { logger: log } = createSmartEditLogger({
+  name: 'smart-edit.project',
+  emitToConsole: true,
+  level: 'info'
+});
 
 class IgnoreMatcher implements PathMatcher {
   private readonly engine: Ignore;
@@ -89,7 +94,11 @@ export class Project implements ProjectLike {
   private readonly ignoreMatcher: PathMatcher;
   private readonly languageMatcher: FilenameMatcherLike | null;
 
-  constructor(init: { projectRoot: string; projectConfig: ProjectConfig; isNewlyCreated?: boolean }) {
+  constructor(init: {
+    projectRoot: string;
+    projectConfig: ProjectConfig;
+    isNewlyCreated?: boolean;
+  }) {
     this.projectRoot = path.resolve(init.projectRoot);
     this.projectConfig = init.projectConfig;
     this.isNewlyCreated = init.isNewlyCreated ?? false;
@@ -106,7 +115,9 @@ export class Project implements ProjectLike {
     if (this.projectConfig.ignoreAllFilesInGitignore) {
       const parser = new GitignoreParser(this.projectRoot);
       for (const spec of parser.getIgnoreSpecs()) {
-        log.debug(`Adding ${spec.patterns.length} patterns from ${spec.filePath} to ignored paths.`);
+        log.debug(
+          `Adding ${spec.patterns.length} patterns from ${spec.filePath} to ignored paths.`
+        );
         for (const pattern of spec.patterns) {
           patterns.add(normalizePattern(pattern));
         }
@@ -186,8 +197,13 @@ export class Project implements ProjectLike {
       ? path.resolve(candidate)
       : path.resolve(this.projectRoot, candidate);
 
-    if (!absolutePath.startsWith(`${this.projectRoot}${path.sep}`) && absolutePath !== this.projectRoot) {
-      log.warn(`Path ${absolutePath} is not relative to the project root ${this.projectRoot} and will be ignored.`);
+    if (
+      !absolutePath.startsWith(`${this.projectRoot}${path.sep}`) &&
+      absolutePath !== this.projectRoot
+    ) {
+      log.warn(
+        `Path ${absolutePath} is not relative to the project root ${this.projectRoot} and will be ignored.`
+      );
       return true;
     }
 
@@ -273,7 +289,9 @@ export class Project implements ProjectLike {
         const absoluteEntryPath = path.join(current, entry.name);
         const entryStats = safeStat(absoluteEntryPath);
         if (!entryStats) {
-          log.warn(`File ${absoluteEntryPath} not found (possibly symlink), skipping in gatherSourceFiles.`);
+          log.warn(
+            `File ${absoluteEntryPath} not found (possibly symlink), skipping in gatherSourceFiles.`
+          );
           continue;
         }
 
@@ -374,7 +392,8 @@ export class Project implements ProjectLike {
   }
 
   createLanguageServer(options: CreateLanguageServerOptions): SmartLanguageServer {
-    const lsTimeout = options.lsTimeout === undefined ? DEFAULT_TOOL_TIMEOUT - 5 : options.lsTimeout;
+    const lsTimeout =
+      options.lsTimeout === undefined ? DEFAULT_TOOL_TIMEOUT - 5 : options.lsTimeout;
     return SmartLanguageServer.create(
       {
         codeLanguage: this.projectConfig.language,
@@ -413,14 +432,19 @@ export class Project implements ProjectLike {
     const absolutePath = path.resolve(this.projectRoot, normalizedRelative);
 
     if (!fs.existsSync(absolutePath)) {
-      log.warn(`File ${absolutePath} not found while evaluating ignore rules; treating as ignored.`);
+      log.warn(
+        `File ${absolutePath} not found while evaluating ignore rules; treating as ignored.`
+      );
       return true;
     }
 
     const stats = fs.statSync(absolutePath);
 
     if (stats.isFile() && ignoreNonSourceFiles) {
-      if (this.languageMatcher && !this.languageMatcher.isRelevantFilename(path.basename(absolutePath))) {
+      if (
+        this.languageMatcher &&
+        !this.languageMatcher.isRelevantFilename(path.basename(absolutePath))
+      ) {
         return true;
       }
     }

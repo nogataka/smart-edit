@@ -28,13 +28,11 @@ import {
 } from './lsp_protocol_handler/server.js';
 import type {
   DocumentSymbolResult,
-  FullSymbolTreeOptions,
-  ReferenceInSymbol,
-  ReferencingSymbolsOptions,
+  LspLocation,
+  ReferenceParams,
   SmartLanguageServerHandler,
   SmartLanguageServerNotifications,
-  SmartLanguageServerRequests,
-  UnifiedSymbolInformation
+  SmartLanguageServerRequests
 } from './ls.js';
 
 type WireLogger = (source: string, destination: string, payload: unknown) => void;
@@ -78,7 +76,9 @@ interface NormalizedCommand {
   shell: boolean;
 }
 
-export class NodeLanguageServerHandler implements SmartLanguageServerHandler, LanguageServerRequestDelegate {
+export class NodeLanguageServerHandler
+  implements SmartLanguageServerHandler, LanguageServerRequestDelegate
+{
   readonly send: SmartLanguageServerRequests;
   readonly notify: SmartLanguageServerNotifications;
 
@@ -96,14 +96,19 @@ export class NodeLanguageServerHandler implements SmartLanguageServerHandler, La
   private readonly requestHandlers = new Map<string, (params: unknown) => unknown>();
   private readonly notificationHandlers = new Map<string, (params: unknown) => void>();
 
-  constructor(processLaunchInfo: ProcessLaunchInfo, options: NodeLanguageServerHandlerOptions = {}) {
+  constructor(
+    processLaunchInfo: ProcessLaunchInfo,
+    options: NodeLanguageServerHandlerOptions = {}
+  ) {
     this.processLaunchInfo = processLaunchInfo;
     this.logger = options.logger;
     this.startIndependentProcessGroup = options.startIndependentProcessGroup ?? true;
     this.requestTimeoutSeconds = options.requestTimeoutSeconds ?? null;
 
     this.send = new LanguageServerRequest(this);
-    this.notify = new LspNotification((method, params) => this.sendNotification(method, (params ?? null) as PayloadLike));
+    this.notify = new LspNotification((method, params) =>
+      this.sendNotification(method, (params ?? null) as PayloadLike)
+    );
   }
 
   setRequestTimeout(timeout: number | null): void {
@@ -230,10 +235,11 @@ export class NodeLanguageServerHandler implements SmartLanguageServerHandler, La
     child.stderr?.destroy();
   }
 
-  sendRequest(method: 'textDocument/documentSymbol', params: DocumentSymbolRequestParams): DocumentSymbolResult | null;
-  sendRequest(method: 'smart-edit/fullSymbolTree', params: FullSymbolTreeOptions): UnifiedSymbolInformation[] | null;
-  sendRequest(method: 'smart-edit/referencingSymbols', params: ReferencingSymbolsOptions): ReferenceInSymbol[] | null;
-  sendRequest(method: 'smart-edit/overview', params: string): Record<string, UnifiedSymbolInformation[]> | null;
+  sendRequest(
+    method: 'textDocument/documentSymbol',
+    params: DocumentSymbolRequestParams
+  ): DocumentSymbolResult | null;
+  sendRequest(method: 'textDocument/references', params: ReferenceParams): LspLocation[] | null;
   sendRequest(method: 'shutdown'): void;
   sendRequest(method: string, params?: unknown): unknown;
   sendRequest(method: string, params?: unknown): unknown {
@@ -254,12 +260,8 @@ export class NodeLanguageServerHandler implements SmartLanguageServerHandler, La
     switch (method) {
       case 'textDocument/documentSymbol':
         return (response ?? null) as DocumentSymbolResult | null;
-      case 'smart-edit/fullSymbolTree':
-        return (response ?? null) as UnifiedSymbolInformation[] | null;
-      case 'smart-edit/referencingSymbols':
-        return (response ?? null) as ReferenceInSymbol[] | null;
-      case 'smart-edit/overview':
-        return (response ?? null) as Record<string, UnifiedSymbolInformation[]> | null;
+      case 'textDocument/references':
+        return (response ?? null) as LspLocation[] | null;
       case 'shutdown':
         return undefined;
       default:
@@ -268,7 +270,8 @@ export class NodeLanguageServerHandler implements SmartLanguageServerHandler, La
   }
 
   private waitForResponse(requestId: number, method: string): unknown {
-    const timeoutMillis = this.requestTimeoutSeconds != null ? this.requestTimeoutSeconds * 1000 : null;
+    const timeoutMillis =
+      this.requestTimeoutSeconds != null ? this.requestTimeoutSeconds * 1000 : null;
     const deadline = timeoutMillis != null ? Date.now() + timeoutMillis : null;
 
     while (true) {
@@ -289,10 +292,7 @@ export class NodeLanguageServerHandler implements SmartLanguageServerHandler, La
         if (response.id === requestId) {
           const errorPayload = (response.error ?? {}) as StringDict;
           const lspError = LSPError.fromLsp(errorPayload);
-          throw new SmartLSPException(
-            `Error processing request ${method}`,
-            lspError
-          );
+          throw new SmartLSPException(`Error processing request ${method}`, lspError);
         }
       }
 
@@ -320,7 +320,9 @@ export class NodeLanguageServerHandler implements SmartLanguageServerHandler, La
       }
 
       if (deadline !== null && Date.now() > deadline) {
-        throw new SmartLSPException(`Request timed out after ${this.requestTimeoutSeconds} seconds.`);
+        throw new SmartLSPException(
+          `Request timed out after ${this.requestTimeoutSeconds} seconds.`
+        );
       }
 
       const chunk = Buffer.allocUnsafe(4096);
@@ -337,7 +339,9 @@ export class NodeLanguageServerHandler implements SmartLanguageServerHandler, La
 
       if (bytesRead === 0) {
         if (!this.isRunning()) {
-          throw new LanguageServerTerminatedException('Language server terminated while waiting for response.');
+          throw new LanguageServerTerminatedException(
+            'Language server terminated while waiting for response.'
+          );
         }
         continue;
       }
@@ -382,7 +386,9 @@ export class NodeLanguageServerHandler implements SmartLanguageServerHandler, La
       return null;
     }
 
-    const body = this.stdoutBuffer.subarray(headerEnd + HEADER_SEPARATOR.length, totalLength).toString(ENCODING);
+    const body = this.stdoutBuffer
+      .subarray(headerEnd + HEADER_SEPARATOR.length, totalLength)
+      .toString(ENCODING);
     this.stdoutBuffer = this.stdoutBuffer.subarray(totalLength);
 
     try {
@@ -403,7 +409,8 @@ export class NodeLanguageServerHandler implements SmartLanguageServerHandler, La
       const result = handler(request.params);
       this.sendPayload(makeResponse(request.id ?? null, result as PayloadLike));
     } catch (error) {
-      const err = error instanceof LSPError ? error : new LSPError(ErrorCodes.InternalError, String(error));
+      const err =
+        error instanceof LSPError ? error : new LSPError(ErrorCodes.InternalError, String(error));
       this.sendPayload(makeErrorResponse(request.id ?? null, err));
     }
   }
@@ -457,7 +464,10 @@ export class NodeLanguageServerHandler implements SmartLanguageServerHandler, La
       const err = error as NodeJS.ErrnoException;
       if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') {
         if (!this.shuttingDown) {
-          throw new LanguageServerTerminatedException('Language server stdin is no longer available.', err);
+          throw new LanguageServerTerminatedException(
+            'Language server stdin is no longer available.',
+            err
+          );
         }
         return;
       }
@@ -475,7 +485,6 @@ export class NodeLanguageServerHandler implements SmartLanguageServerHandler, La
       void error;
     }
   }
-
 }
 
 function isJsonRpcRequest(message: JsonRpcMessage): message is JsonRpcRequest {
