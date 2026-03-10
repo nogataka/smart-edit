@@ -17,8 +17,7 @@ import {
   type SmartLanguageServerHandler,
   type SmartLanguageServerNotifications,
   type SmartLanguageServerRequests,
-  type UnifiedSymbolInformation,
-  type ReferenceInSymbol
+  type UnifiedSymbolInformation
 } from '../../../src/smart-lsp/ls.js';
 import { Language } from '../../../src/smart-lsp/ls_config.js';
 
