@@ -312,6 +312,8 @@ export class NodeLanguageServerHandler
       throw new SmartLSPException('Language server stdout is not available.');
     }
 
+    let consecutiveEofCount = 0;
+
     while (true) {
       const message = this.extractMessageFromBuffer();
       if (message) {
@@ -338,7 +340,12 @@ export class NodeLanguageServerHandler
       }
 
       if (bytesRead === 0) {
-        if (!this.isRunning()) {
+        consecutiveEofCount++;
+        // readSync returning 0 means EOF on the pipe. In a synchronous readSync loop
+        // the Node.js event loop cannot run, so child.exitCode is never updated and
+        // isRunning() stays true even after the process has exited. To avoid a deadlock,
+        // treat consecutive EOF reads as proof that the process has terminated.
+        if (!this.isRunning() || consecutiveEofCount > 10) {
           throw new LanguageServerTerminatedException(
             'Language server terminated while waiting for response.'
           );
@@ -346,6 +353,7 @@ export class NodeLanguageServerHandler
         continue;
       }
 
+      consecutiveEofCount = 0;
       this.stdoutBuffer = Buffer.concat([this.stdoutBuffer, chunk.subarray(0, bytesRead)]);
     }
   }
